@@ -6,6 +6,8 @@ package de.dfki.mlt.freextractor.flink;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.javatuples.Pair;
+
 /**
  * @author Aydan Rende, DFKI
  *
@@ -14,24 +16,27 @@ public class Entity {
 	private String id;
 	private String type;
 	private String label;
-	private String wikipediaTitle;
+	private String wikiTitle;
 	private List<String> aliases;
+	private List<Pair<String, String>> claims;
 
 	public Entity() {
 		id = "";
 		type = "";
 		label = "";
-		wikipediaTitle = "";
+		wikiTitle = "";
 		aliases = new ArrayList<String>();
+		claims = new ArrayList<Pair<String, String>>();
 	}
 
 	public Entity(String id, String type, String label, String wikipediaTitle,
-			List<String> aliases) {
+			List<String> aliases, List<Pair<String, String>> claims) {
 		this.id = id;
 		this.type = type;
 		this.label = label;
-		this.wikipediaTitle = wikipediaTitle;
+		this.wikiTitle = wikipediaTitle;
 		this.aliases = aliases;
+		this.claims = claims;
 	}
 
 	/**
@@ -80,21 +85,6 @@ public class Entity {
 	}
 
 	/**
-	 * @return the wikipediaTitle
-	 */
-	public String getWikipediaTitle() {
-		return wikipediaTitle;
-	}
-
-	/**
-	 * @param wikipediaTitle
-	 *            the wikipediaTitle to set
-	 */
-	public void setWikipediaTitle(String wikipediaTitle) {
-		this.wikipediaTitle = wikipediaTitle;
-	}
-
-	/**
 	 * @return the type
 	 */
 	public String getType() {
@@ -102,10 +92,41 @@ public class Entity {
 	}
 
 	/**
-	 * @param type the type to set
+	 * @param type
+	 *            the type to set
 	 */
 	public void setType(String type) {
 		this.type = type;
+	}
+
+	/**
+	 * @return the wikiTitle
+	 */
+	public String getWikiTitle() {
+		return wikiTitle;
+	}
+
+	/**
+	 * @return the claims
+	 */
+	public List<Pair<String, String>> getClaims() {
+		return claims;
+	}
+
+	/**
+	 * @param wikiTitle
+	 *            the wikiTitle to set
+	 */
+	public void setWikiTitle(String wikiTitle) {
+		this.wikiTitle = wikiTitle;
+	}
+
+	/**
+	 * @param claims
+	 *            the claims to set
+	 */
+	public void setClaims(List<Pair<String, String>> claims) {
+		this.claims = claims;
 	}
 
 }

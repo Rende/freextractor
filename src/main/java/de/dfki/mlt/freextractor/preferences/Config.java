@@ -18,7 +18,6 @@ public final class Config {
 	public static final String PORT = "port";
 	public static final String WIKIDATA_INDEX = "wikidata.index";
 	public static final String WIKIDATA_ENTITY = "wikidata.entity.type";
-	public static final String WIKIDATA_CLAIM = "wikidata.claim.type";
 	public static final String WIKIPEDIA_SENTENCE_INDEX = "wikipedia.sentence.index";
 	public static final String WIKIPEDIA_RELATION_INDEX = "wikipedia.relation.index";
 	public static final String WIKIPEDIA_SENTENCE = "wikipedia.sentence.type";

@@ -5,9 +5,7 @@ package de.dfki.mlt.freextractor.flink;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
@@ -34,25 +32,27 @@ public class RelationExtractionMap extends
 	 */
 	private static final long serialVersionUID = 1L;
 	private JTok jtok;
+
 	private HashMap<Integer, String> objectMap;
+	private HashMap<String, Entity> entityMap;
+	private HashMap<String, Entity> objectParentMap;
 	private List<String> tokenList;
+	private Entity subject;
 	private int subjectIndex;
 
 	// pageId, subjectId, title, sentence
 	public void flatMap(Tuple4<Integer, String, String, String> value,
 			Collector<Relation> out) throws Exception {
 
-		objectMap = new HashMap<Integer, String>();
+		// objectMap is created in tokenizer
 		tokenList = tokenizer(value.f3, value.f2);
-		// get all claims of the subject
-		List<Pair<String, String>> claimList = App.esService
-				.getClaimList(value.f1);
-		HashMap<String, Entity> entitiesOfSubject = collectEntities(claimList);
-
-		if (entitiesOfSubject != null) {
-			for (Pair<String, String> pair : claimList) {
-				Entity object = entitiesOfSubject.get(pair.getValue1());
-				Entity property = entitiesOfSubject.get(pair.getValue0());
+		subject = App.esService.getEntity(value.f1);
+		if (subject != null) {
+			entityMap = collectEntities(subject.getClaims());
+			objectParentMap = getObjectParentMap();
+			for (Pair<String, String> pair : subject.getClaims()) {
+				Entity property = entityMap.get(pair.getValue0());
+				Entity object = entityMap.get(pair.getValue1());
 				if (object != null && property != null) {
 					List<Relation> relationList = getRelationList(object,
 							property, value.f1, value.f0);
@@ -65,7 +65,36 @@ public class RelationExtractionMap extends
 		}
 	}
 
-	public void convertToJson() {
+	public HashMap<String, Entity> getObjectParentMap() {
+		List<String> objIdList = new ArrayList<String>();
+		List<String> idList = new ArrayList<String>();
+		for (Pair<String, String> subjClaim : subject.getClaims()) {
+			Entity object = entityMap.get(subjClaim.getValue1());
+			if (object != null && object.getClaims() != null) {
+				for (int objectIndex : objectMap.keySet()) {
+					if (objectMap.get(objectIndex).equalsIgnoreCase(
+							fromStringToWikilabel(object.getLabel()))) {
+						List<Pair<String, String>> objClaims = object
+								.getClaims();
+						for (Pair<String, String> objClaim : objClaims) {
+							if (objClaim.getValue0().equals("P31")) {
+								objIdList.add(object.getId());
+								idList.add(objClaim.getValue1());
+							}
+						}
+					}
+				}
+			}
+		}
+		List<Entity> parentList = new ArrayList<Entity>();
+		if (!idList.isEmpty()) {
+			parentList = App.esService.getMultiEntities(idList);
+		}
+		HashMap<String, Entity> objectParentMap = new HashMap<String, Entity>();
+		for (int i = 0; i < objIdList.size(); i++) {
+			objectParentMap.put(objIdList.get(i), parentList.get(i));
+		}
+		return objectParentMap;
 
 	}
 
@@ -73,42 +102,45 @@ public class RelationExtractionMap extends
 			String subjectId, int pageId) {
 		List<Relation> relationList = new ArrayList<Relation>();
 		for (int objectIndex : objectMap.keySet()) {
-			if (objectMap.get(objectIndex).contains(
+			if (objectMap.get(objectIndex).equalsIgnoreCase(
 					fromStringToWikilabel(object.getLabel()))) {
-				Relation relation = searchRelation(tokenList, property,
-						objectIndex, object.getId(), subjectId, pageId);
-
+				Relation relation = searchRelation(property, objectIndex,
+						object.getId(), subjectId, pageId);
 				if (relation != null) {
 					relationList.add(relation);
 				}
 			}
 		}
 		return relationList;
-
 	}
 
 	public HashMap<String, Entity> collectEntities(
 			List<Pair<String, String>> claimObjectList) {
-		Set<String> idSet = new HashSet<String>();
+		List<String> idSet = new ArrayList<String>();
 		for (Pair<String, String> pair : claimObjectList) {
 			// property-id
 			idSet.add(pair.getValue0());
 			// object-id
 			idSet.add(pair.getValue1());
 		}
-		HashMap<String, Entity> entitiesOfSubject = new HashMap<String, Entity>();
+		HashMap<String, Entity> entityMap = new HashMap<String, Entity>();
 		if (!idSet.isEmpty()) {
-			// entitiesOfSubject contains properties + objects
-			entitiesOfSubject = App.esService.getMultiEntities(idSet);
+			// entityMap contains properties + objects
+			entityMap = entityListToMap(App.esService.getMultiEntities(idSet));
 		}
-		if (!entitiesOfSubject.isEmpty())
-			return entitiesOfSubject;
-		else
-			return null;
+		return entityMap;
+	}
 
+	private HashMap<String, Entity> entityListToMap(List<Entity> entityList) {
+		HashMap<String, Entity> entityMap = new HashMap<String, Entity>();
+		for (Entity entity : entityList) {
+			entityMap.put(entity.getId(), entity);
+		}
+		return entityMap;
 	}
 
 	public List<String> tokenizer(String text, String title) {
+		objectMap = new HashMap<Integer, String>();
 		AnnotatedString annString = jtok.tokenize(text, "en");
 		List<Token> tokenList = Outputter.createTokens(annString);
 		List<String> wordList = new ArrayList<String>();
@@ -188,9 +220,9 @@ public class RelationExtractionMap extends
 		return label;
 	}
 
-	public Relation searchRelation(List<String> tokenList, Entity property,
-			int objectIndex, String objectId, String subjectId, int pageId) {
-
+	public Relation searchRelation(Entity property, int objectIndex,
+			String objectId, String subjectId, int pageId) {
+		appendParentLabel(objectIndex, objectId);
 		for (String alias : property.getAliases()) {
 			String[] aliasFragments = alias.split(" ");
 			List<String> aliasFragmentList = new ArrayList<String>();
@@ -233,13 +265,31 @@ public class RelationExtractionMap extends
 		return null;
 	}
 
+	private void appendParentLabel(int objectIndex, String objectId) {
+		if (!objectParentMap.isEmpty() && objectParentMap.containsKey(objectId)) {
+			String token = tokenList.get(objectIndex);
+			if (token.contains("]]")) {
+				token = token.replaceAll("\\]\\]", "");
+			}
+			token = token + "| " + objectParentMap.get(objectId).getLabel();
+			if (token.contains("[[")) {
+				token = token + " ]]";
+			}
+			tokenList.set(objectIndex, token);
+		}
+	}
+
 	@Override
 	public void open(Configuration parameters) {
 		try {
 			super.open(parameters);
 			jtok = new JTok();
 			objectMap = new HashMap<Integer, String>();
+			entityMap = new HashMap<String, Entity>();
+			objectParentMap = new HashMap<String, Entity>();
 			tokenList = new ArrayList<String>();
+			subject = new Entity();
+			subjectIndex = 0;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

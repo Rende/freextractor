@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.flink.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
@@ -189,11 +188,8 @@ public class ElasticsearchService {
 		return putMappingResponse.isAcknowledged();
 	}
 
-	private SearchResponse getClaims(String entityId) {
-		QueryBuilder query = QueryBuilders
-				.boolQuery()
-				.must(QueryBuilders.termQuery("entity_id", entityId))
-				.must(QueryBuilders.termQuery("data_type", "wikibase-entityid"));
+	public Entity getEntity(String entityId) {
+		QueryBuilder query = QueryBuilders.termQuery("_id", entityId);
 		// System.out.println(query);
 		try {
 			SearchRequestBuilder requestBuilder = getClient()
@@ -202,12 +198,40 @@ public class ElasticsearchService {
 									Config.WIKIDATA_INDEX))
 					.setTypes(
 							Config.getInstance().getString(
-									Config.WIKIDATA_CLAIM))
-					.addFields("property_id", "data_value").setQuery(query)
-					.setSize(100);
+									Config.WIKIDATA_ENTITY))
+					.addFields("type", "label", "wiki-title", "aliases",
+							"claims.property_id", "claims.object-id")
+					.setQuery(query).setSize(1);
 			SearchResponse response = requestBuilder.execute().actionGet();
 			// System.out.println(response);
-			return response;
+
+			if (isResponseValid(response)) {
+				for (SearchHit hit : response.getHits()) {
+					String id = hit.getId();
+					String type = hit.field("type").getValue().toString();
+					String label = hit.field("label").getValue().toString();
+					String wikiTitle = hit.field("wiki-title").getValue()
+							.toString();
+					List<String> aliases = new ArrayList<String>();
+					for (Object object : hit.field("aliases").getValues()) {
+						aliases.add(String.valueOf(object));
+					}
+					List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
+					if (hit.field("claims.property_id") != null) {
+						for (int i = 0; i < hit.field("claims.property_id")
+								.getValues().size(); i++) {
+							String propId = hit.field("claims.property_id")
+									.getValues().get(i).toString();
+							String objId = hit.field("claims.object-id")
+									.getValues().get(i).toString();
+							claims.add(new Pair<String, String>(propId, objId));
+						}
+					}
+					Entity entity = new Entity(id, type, label, wikiTitle,
+							aliases, claims);
+					return entity;
+				}
+			}
 
 		} catch (Throwable e) {
 			e.printStackTrace();
@@ -215,32 +239,20 @@ public class ElasticsearchService {
 		return null;
 	}
 
-	public List<Pair<String, String>> getClaimList(String entityId) {
-		SearchResponse response = getClaims(entityId);
-		List<Pair<String, String>> claimObject = new ArrayList<Pair<String, String>>();
-		if (isResponseValid(response)) {
-			for (SearchHit hit : response.getHits()) {
-				claimObject.add(new Pair<String, String>(hit
-						.field("property_id").getValue().toString(), hit
-						.field("data_value").getValue().toString()));
-			}
-		}
-		return claimObject;
-	}
-
 	public boolean isResponseValid(SearchResponse response) {
 		return response != null && response.getHits().totalHits() > 0;
 	}
 
-	public HashMap<String, Entity> getMultiEntities(Set<String> idSet) {
+	public List<Entity> getMultiEntities(List<String> idList) {
 
-		HashMap<String, Entity> itemMap = new HashMap<String, Entity>();
+		List<Entity> itemList = new ArrayList<Entity>();
 		MultiGetRequestBuilder requestBuilder = getClient().prepareMultiGet();
-		for (String itemId : idSet) {
+		for (String itemId : idList) {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance()
 					.getString(Config.WIKIDATA_INDEX), Config.getInstance()
 					.getString(Config.WIKIDATA_ENTITY), itemId).fields("type",
-					"label", "wikipedia_title", "aliases"));
+					"label", "wiki-title", "aliases", "claims.property_id",
+					"claims.object-id"));
 		}
 		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
 		for (MultiGetItemResponse multiGetItemResponse : multiResponse
@@ -250,18 +262,29 @@ public class ElasticsearchService {
 				String id = response.getId();
 				String type = response.getField("type").getValue().toString();
 				String label = response.getField("label").getValue().toString();
-				String wikipediaTitle = response.getField("wikipedia_title")
+				String wikipediaTitle = response.getField("wiki-title")
 						.getValue().toString();
 				List<String> aliases = new ArrayList<String>();
 				for (Object object : response.getField("aliases").getValues()) {
 					aliases.add(String.valueOf(object));
 				}
-				itemMap.put(id, new Entity(id, type, label, wikipediaTitle,
-						aliases));
+				List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
+				if (response.getField("claims.property_id") != null) {
+					for (int i = 0; i < response.getField("claims.property_id")
+							.getValues().size(); i++) {
+						String propId = response.getField("claims.property_id")
+								.getValues().get(i).toString();
+						String objId = response.getField("claims.object-id")
+								.getValues().get(i).toString();
+						claims.add(new Pair<String, String>(propId, objId));
+					}
+				}
+				itemList.add(new Entity(id, type, label, wikipediaTitle,
+						aliases, claims));
 
 			}
 		}
-		return itemMap;
+		return itemList;
 	}
 
 }
