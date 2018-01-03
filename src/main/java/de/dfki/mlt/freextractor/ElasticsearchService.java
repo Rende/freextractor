@@ -200,7 +200,7 @@ public class ElasticsearchService {
 							Config.getInstance().getString(
 									Config.WIKIDATA_ENTITY))
 					.addFields("type", "label", "wiki-title", "aliases",
-							"claims.property_id", "claims.object-id")
+							"claims.property-id", "claims.object-id")
 					.setQuery(query).setSize(1);
 			SearchResponse response = requestBuilder.execute().actionGet();
 			// System.out.println(response);
@@ -217,10 +217,10 @@ public class ElasticsearchService {
 						aliases.add(String.valueOf(object));
 					}
 					List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-					if (hit.field("claims.property_id") != null) {
-						for (int i = 0; i < hit.field("claims.property_id")
+					if (hit.field("claims.property-id") != null) {
+						for (int i = 0; i < hit.field("claims.property-id")
 								.getValues().size(); i++) {
-							String propId = hit.field("claims.property_id")
+							String propId = hit.field("claims.property-id")
 									.getValues().get(i).toString();
 							String objId = hit.field("claims.object-id")
 									.getValues().get(i).toString();
@@ -251,7 +251,7 @@ public class ElasticsearchService {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance()
 					.getString(Config.WIKIDATA_INDEX), Config.getInstance()
 					.getString(Config.WIKIDATA_ENTITY), itemId).fields("type",
-					"label", "wiki-title", "aliases", "claims.property_id",
+					"label", "wiki-title", "aliases", "claims.property-id",
 					"claims.object-id"));
 		}
 		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
@@ -269,10 +269,10 @@ public class ElasticsearchService {
 					aliases.add(String.valueOf(object));
 				}
 				List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-				if (response.getField("claims.property_id") != null) {
-					for (int i = 0; i < response.getField("claims.property_id")
+				if (response.getField("claims.property-id") != null) {
+					for (int i = 0; i < response.getField("claims.property-id")
 							.getValues().size(); i++) {
-						String propId = response.getField("claims.property_id")
+						String propId = response.getField("claims.property-id")
 								.getValues().get(i).toString();
 						String objId = response.getField("claims.object-id")
 								.getValues().get(i).toString();

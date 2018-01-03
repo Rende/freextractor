@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.configuration.Configuration;
@@ -54,64 +53,14 @@ public class RelationExtractionMap extends
 				Entity property = entityMap.get(pair.getValue0());
 				Entity object = entityMap.get(pair.getValue1());
 				if (object != null && property != null) {
-					List<Relation> relationList = getRelationList(object,
-							property, value.f1, value.f0);
-					for (Relation relation : relationList) {
+					Relation relation = getRelation(object, property, value.f1,
+							value.f0);
+					if (relation != null) {
 						out.collect(relation);
-						System.out.println(relation.getSurface());
 					}
 				}
 			}
 		}
-	}
-
-	public HashMap<String, Entity> getObjectParentMap() {
-		List<String> objIdList = new ArrayList<String>();
-		List<String> idList = new ArrayList<String>();
-		for (Pair<String, String> subjClaim : subject.getClaims()) {
-			Entity object = entityMap.get(subjClaim.getValue1());
-			if (object != null && object.getClaims() != null) {
-				for (int objectIndex : objectMap.keySet()) {
-					if (objectMap.get(objectIndex).equalsIgnoreCase(
-							fromStringToWikilabel(object.getLabel()))) {
-						List<Pair<String, String>> objClaims = object
-								.getClaims();
-						for (Pair<String, String> objClaim : objClaims) {
-							if (objClaim.getValue0().equals("P31")) {
-								objIdList.add(object.getId());
-								idList.add(objClaim.getValue1());
-							}
-						}
-					}
-				}
-			}
-		}
-		List<Entity> parentList = new ArrayList<Entity>();
-		if (!idList.isEmpty()) {
-			parentList = App.esService.getMultiEntities(idList);
-		}
-		HashMap<String, Entity> objectParentMap = new HashMap<String, Entity>();
-		for (int i = 0; i < objIdList.size(); i++) {
-			objectParentMap.put(objIdList.get(i), parentList.get(i));
-		}
-		return objectParentMap;
-
-	}
-
-	public List<Relation> getRelationList(Entity object, Entity property,
-			String subjectId, int pageId) {
-		List<Relation> relationList = new ArrayList<Relation>();
-		for (int objectIndex : objectMap.keySet()) {
-			if (objectMap.get(objectIndex).equalsIgnoreCase(
-					fromStringToWikilabel(object.getLabel()))) {
-				Relation relation = searchRelation(property, objectIndex,
-						object.getId(), subjectId, pageId);
-				if (relation != null) {
-					relationList.add(relation);
-				}
-			}
-		}
-		return relationList;
 	}
 
 	public HashMap<String, Entity> collectEntities(
@@ -129,6 +78,57 @@ public class RelationExtractionMap extends
 			entityMap = entityListToMap(App.esService.getMultiEntities(idSet));
 		}
 		return entityMap;
+	}
+
+	public HashMap<String, Entity> getObjectParentMap() {
+		List<String> objIdList = new ArrayList<String>();
+		List<String> parentIdList = new ArrayList<String>();
+		for (Pair<String, String> subjClaim : subject.getClaims()) {
+			Entity object = entityMap.get(subjClaim.getValue1());
+			if (object != null && object.getClaims() != null) {
+				for (int objectIndex : objectMap.keySet()) {
+					if (objectMap.get(objectIndex).equalsIgnoreCase(
+							Helper.fromStringToWikilabel(object.getLabel()))) {
+						List<Pair<String, String>> objClaims = object
+								.getClaims();
+						for (Pair<String, String> objClaim : objClaims) {
+							if (objClaim.getValue0().equals("P31")) {
+								objIdList.add(object.getId());
+								parentIdList.add(objClaim.getValue1());
+							}
+						}
+					}
+				}
+			}
+		}
+		List<Entity> parentList = new ArrayList<Entity>();
+		if (!parentIdList.isEmpty()) {
+			parentList = App.esService.getMultiEntities(parentIdList);
+		}
+		HashMap<String, Entity> objectParentMap = new HashMap<String, Entity>();
+		for (int i = 0; i < parentIdList.size(); i++) {
+			for (int j = 0; j < parentList.size(); j++) {
+				if (parentList.get(j).getId().equals(parentIdList.get(i))) {
+					objectParentMap.put(objIdList.get(i), parentList.get(j));
+				}
+			}
+		}
+		return objectParentMap;
+	}
+
+	public Relation getRelation(Entity object, Entity property,
+			String subjectId, int pageId) {
+		for (int objectIndex : objectMap.keySet()) {
+			if (objectMap.get(objectIndex).equalsIgnoreCase(
+					Helper.fromStringToWikilabel(object.getLabel()))) {
+				Relation relation = searchRelation(property, objectIndex,
+						object.getId(), pageId);
+				if (relation != null) {
+					return relation;
+				}
+			}
+		}
+		return null;
 	}
 
 	private HashMap<String, Entity> entityListToMap(List<Entity> entityList) {
@@ -184,7 +184,7 @@ public class RelationExtractionMap extends
 								.trim().replace("\\|", "");
 					}
 				}
-				label = fromStringToWikilabel(label);
+				label = Helper.fromStringToWikilabel(label);
 				objectMap.put(index, label);
 				builder.append(token.getImage() + " ");
 				inBracket = false;
@@ -204,24 +204,8 @@ public class RelationExtractionMap extends
 		return wordList;
 	}
 
-	public String fromStringToWikilabel(String image) {
-		String label = "";
-		if (image.contains("|")) {
-			String[] images = image.split("\\|");
-			try {
-				label = images[0];
-			} catch (ArrayIndexOutOfBoundsException e) {
-				label = image.trim().replace("\\|", "");
-			}
-		} else {
-			label = image;
-		}
-		label = StringUtils.capitalize(label.trim().replaceAll(" ", "_"));
-		return label;
-	}
-
 	public Relation searchRelation(Entity property, int objectIndex,
-			String objectId, String subjectId, int pageId) {
+			String objectId, int pageId) {
 		appendParentLabel(objectIndex, objectId);
 		for (String alias : property.getAliases()) {
 			String[] aliasFragments = alias.split(" ");
@@ -257,9 +241,9 @@ public class RelationExtractionMap extends
 				// System.out.println("Relation:" + builder.toString().trim()
 				// + " startIndex: " + startIndex + " endIndex:"
 				// + endIndex);
-				return new Relation(pageId, subjectId, subjectIndex, objectId,
-						objectIndex, builder.toString().trim(), startIndex,
-						endIndex, property.getId(), alias);
+				return new Relation(pageId, subject.getId(), subjectIndex,
+						objectId, objectIndex, builder.toString().trim(),
+						startIndex, endIndex, property.getId(), alias);
 			}
 		}
 		return null;
