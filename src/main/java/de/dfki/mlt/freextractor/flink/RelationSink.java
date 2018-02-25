@@ -58,7 +58,7 @@ public class RelationSink implements ElasticsearchSinkFunction<Relation> {
 		try {
 			indexer.add(createIndexRequest(relation));
 		} catch (Exception exception) {
-			App.LOG.error("RelationSinkFucntion: " + exception, exception);
+			App.LOG.error("RelationSinkFunction: " + exception, exception);
 		}
 	}
 }

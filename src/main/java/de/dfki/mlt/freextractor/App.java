@@ -2,15 +2,15 @@ package de.dfki.mlt.freextractor;
 
 import java.io.IOException;
 
-import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dfki.mlt.freextractor.flink.RelationExtractionMap;
-import de.dfki.mlt.freextractor.flink.RelationSink;
+import de.dfki.mlt.freextractor.flink.ClusterSink;
+import de.dfki.mlt.freextractor.flink.ClusteringMap;
 import de.dfki.mlt.freextractor.flink.SentenceDatasource;
 import de.dfki.mlt.freextractor.preferences.Config;
 
@@ -23,34 +23,43 @@ public class App {
 	public static ElasticsearchService esService = new ElasticsearchService();
 
 	public static void main(String[] args) throws Exception {
-
-		try {
-			esService.checkAndCreateIndex(Config.getInstance().getString(
-					Config.WIKIPEDIA_RELATION_INDEX));
-
-		} catch (IOException | InterruptedException e) {
-			e.printStackTrace();
-		}
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
-				.getExecutionEnvironment().setParallelism(10);
+				.getExecutionEnvironment();
 
-		DataStream<Tuple4<Integer, String, String, String>> stream = env
+		DataStream<Tuple5<Integer, String, String, String, String>> stream = env
 				.addSource(new SentenceDatasource());
-		// stream.map(
-		// new MapFunction<Tuple4<Integer, String, String, String>, String>() {
+		// if (Config.getInstance().getBoolean(Config.RELEX_MODE)) {
+		// env.setParallelism(10);
+		// try {
+		// // esService.checkAndCreateIndex(Config.getInstance().getString(
+		// // Config.WIKIPEDIA_INDEX));
+		// esService.putMappingForClusterEntry();
+		// esService.putMappingForRelations();
 		//
-		// @Override
-		// public String map(
-		// Tuple4<Integer, String, String, String> value)
-		// throws Exception {
-		// return value.f3.trim();
+		// } catch (IOException | InterruptedException e) {
+		// e.printStackTrace();
 		// }
-		// }).writeAsText("/Users/aydanrende/Documents/sentences",
-		// WriteMode.NO_OVERWRITE);
-		stream.flatMap(new RelationExtractionMap()).addSink(
-				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(),
-						new RelationSink()));
+		//
+		// stream.flatMap(new RelationExtractionMap()).addSink(
+		// new ElasticsearchSink<>(ElasticsearchService
+		// .getUserConfig(), ElasticsearchService
+		// .getTransportAddresses(), new RelationSink()));
+		// }
+		if (Config.getInstance().getBoolean(Config.CLUSTER_MODE)) {
+			env.setParallelism(10);
+			try {
+				esService.checkAndCreateIndex(Config.getInstance().getString(
+						Config.CLUSTER_ENTRY_INDEX));
+				esService.putMappingForClusterEntry();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			stream.flatMap(new ClusteringMap()).addSink(
+					new ElasticsearchSink<>(ElasticsearchService
+							.getUserConfig(), ElasticsearchService
+							.getTransportAddresses(), new ClusterSink()));
+		}
 
 		env.execute("Freextractor");
 

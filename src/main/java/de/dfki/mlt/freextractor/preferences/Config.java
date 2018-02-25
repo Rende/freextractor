@@ -19,12 +19,18 @@ public final class Config {
 	public static final String WIKIDATA_INDEX = "wikidata.index";
 	public static final String WIKIDATA_ENTITY = "wikidata.entity.type";
 	public static final String WIKIPEDIA_SENTENCE_INDEX = "wikipedia.sentence.index";
-	public static final String WIKIPEDIA_RELATION_INDEX = "wikipedia.relation.index";
+	public static final String WIKIPEDIA_RELATION_INDEX = "wikipedia.relation.type";
+	public static final String CLUSTER_ENTRY_INDEX = "cluster.entry.index";
+	public static final String RELATION_CLUSTER_INDEX = "relation.cluster.index";
 	public static final String WIKIPEDIA_SENTENCE = "wikipedia.sentence.type";
 	public static final String WIKIPEDIA_RELATION = "wikipedia.relation.type";
+	public static final String RELATION_CLUSTER = "relation.cluster.type";
+	public static final String CLUSTER_ENTRY = "cluster.entry.type";
 	public static final String WIKIPEDIA_EXTENSION = "wikipedia.extension";
 	public static final String NUMBER_OF_SHARDS = "number_of_shards";
 	public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
+	public static final String RELEX_MODE = "relex.mode";
+	public static final String CLUSTER_MODE = "cluster.mode";
 
 	private static PropertiesConfiguration config;
 

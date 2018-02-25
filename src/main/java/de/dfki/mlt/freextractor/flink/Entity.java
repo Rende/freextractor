@@ -16,26 +16,33 @@ public class Entity {
 	private String id;
 	private String type;
 	private String label;
+	private String tokLabel;
 	private String wikiTitle;
 	private List<String> aliases;
+	private List<String> tokAliases;
 	private List<Pair<String, String>> claims;
 
 	public Entity() {
 		id = "";
 		type = "";
 		label = "";
+		tokLabel = "";
 		wikiTitle = "";
 		aliases = new ArrayList<String>();
+		tokAliases = new ArrayList<String>();
 		claims = new ArrayList<Pair<String, String>>();
 	}
 
-	public Entity(String id, String type, String label, String wikipediaTitle,
-			List<String> aliases, List<Pair<String, String>> claims) {
+	public Entity(String id, String type, String label, String tokLabel,
+			String wikipediaTitle, List<String> aliases,
+			List<String> tokAliases, List<Pair<String, String>> claims) {
 		this.id = id;
 		this.type = type;
 		this.label = label;
+		this.tokLabel = tokLabel;
 		this.wikiTitle = wikipediaTitle;
 		this.aliases = aliases;
+		this.tokAliases = tokAliases;
 		this.claims = claims;
 	}
 
@@ -127,6 +134,34 @@ public class Entity {
 	 */
 	public void setClaims(List<Pair<String, String>> claims) {
 		this.claims = claims;
+	}
+
+	/**
+	 * @return the tokLabel
+	 */
+	public String getTokLabel() {
+		return tokLabel;
+	}
+
+	/**
+	 * @return the tokAliases
+	 */
+	public List<String> getTokAliases() {
+		return tokAliases;
+	}
+
+	/**
+	 * @param tokLabel the tokLabel to set
+	 */
+	public void setTokLabel(String tokLabel) {
+		this.tokLabel = tokLabel;
+	}
+
+	/**
+	 * @param tokAliases the tokAliases to set
+	 */
+	public void setTokAliases(List<String> tokAliases) {
+		this.tokAliases = tokAliases;
 	}
 
 }

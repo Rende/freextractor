@@ -15,7 +15,6 @@ import java.util.Map;
 import org.apache.flink.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -111,20 +110,10 @@ public class ElasticsearchService {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
 		final IndicesExistsResponse indexExistReponse = indicesAdminClient
 				.prepareExists(indexName).execute().actionGet();
-		if (indexExistReponse.isExists()) {
-			deleteIndex(indicesAdminClient, indexName);
-		}
-		if (createIndex(indicesAdminClient, indexName)) {
-			result = putMappingForRelations(indicesAdminClient);
+		if (!indexExistReponse.isExists()) {
+			result = createIndex(indicesAdminClient, indexName);
 		}
 		return result;
-	}
-
-	private void deleteIndex(IndicesAdminClient indicesAdminClient,
-			String indexName) {
-		final DeleteIndexRequestBuilder delIdx = indicesAdminClient
-				.prepareDelete(indexName);
-		delIdx.execute().actionGet();
 	}
 
 	private boolean createIndex(IndicesAdminClient indicesAdminClient,
@@ -144,8 +133,8 @@ public class ElasticsearchService {
 				&& createIndexResponse.isAcknowledged();
 	}
 
-	private boolean putMappingForRelations(IndicesAdminClient indicesAdminClient)
-			throws IOException {
+	public boolean putMappingForRelations() throws IOException {
+		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
 		XContentBuilder mappingBuilder = XContentFactory
 				.jsonBuilder()
 				.startObject()
@@ -179,11 +168,85 @@ public class ElasticsearchService {
 				+ mappingBuilder.string());
 		PutMappingResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(
-						Config.getInstance().getString(
-								Config.WIKIPEDIA_RELATION_INDEX))
+						Config.getInstance().getString(Config.WIKIPEDIA_RELATION_INDEX))
 				.setType(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_RELATION))
+				.setSource(mappingBuilder).execute().actionGet();
+		return putMappingResponse.isAcknowledged();
+	}
+
+	public boolean putMappingForClusterEntry() throws IOException {
+		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
+		XContentBuilder mappingBuilder = XContentFactory
+				.jsonBuilder()
+				.startObject()
+				.startObject(
+						Config.getInstance().getString(Config.CLUSTER_ENTRY))
+				.startObject("properties").startObject("subj-type")
+				.field("type", "string").field("index", "not_analyzed")
+				.field("copy_to", "cluster-id").endObject()
+				.startObject("obj-type").field("type", "string")
+				.field("index", "not_analyzed").field("copy_to", "cluster-id")
+				.endObject().startObject("relation").field("type", "string")
+				.field("index", "not_analyzed").field("copy_to", "cluster-id")
+				.endObject().startObject("cluster-id").field("type", "string")
+				.field("index", "not_analyzed").endObject()
+				.startObject("tok-sent").field("type", "string").endObject()
+				.startObject("page-id").field("type", "integer")
+				.field("index", "not_analyzed").endObject()
+				.startObject("subj-pos").field("type", "integer")
+				.field("index", "not_analyzed").endObject()
+				.startObject("obj-pos").field("type", "integer")
+				.field("index", "not_analyzed").endObject()
+				.startObject("words").startObject("properties")
+				.startObject("word").field("type", "string")
+				.field("index", "not_analyzed").endObject()
+				.startObject("count").field("type", "integer")
+				.field("index", "not_analyzed").endObject().endObject()
+				.endObject().endObject() // properties
+				.endObject() // documentType
+				.endObject();
+
+		App.LOG.debug("Mapping for cluster entry: " + mappingBuilder.string());
+		PutMappingResponse putMappingResponse = indicesAdminClient
+				.preparePutMapping(
+						Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
+				.setType(Config.getInstance().getString(Config.CLUSTER_ENTRY))
+				.setSource(mappingBuilder).execute().actionGet();
+
+		return putMappingResponse.isAcknowledged();
+	}
+
+	public boolean putMappingForClusters() throws IOException {
+		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
+		XContentBuilder mappingBuilder = XContentFactory
+				.jsonBuilder()
+				.startObject()
+				.startObject(
+						Config.getInstance().getString(Config.RELATION_CLUSTER))
+				.startObject("properties").startObject("subject-type")
+				.field("type", "string").field("index", "not_analyzed")
+				.endObject().startObject("object-type").field("type", "string")
+				.field("index", "not_analyzed").endObject()
+				.startObject("relation-label").field("type", "string")
+				.field("index", "not_analyzed").endObject()
+				.startObject("words").startObject("properties")
+				.startObject("word").field("type", "string")
+				.field("index", "not_analyzed").endObject()
+				.startObject("count").field("type", "integer")
+				.field("index", "not_analyzed").endObject().endObject()
+				.endObject().endObject() // properties
+				.endObject()// documentType
+				.endObject();
+
+		App.LOG.debug("Mapping for relation clusters: "
+				+ mappingBuilder.string());
+		PutMappingResponse putMappingResponse = indicesAdminClient
+				.preparePutMapping(
+						Config.getInstance().getString(Config.RELATION_CLUSTER_INDEX))
+				.setType(
+						Config.getInstance().getString(Config.RELATION_CLUSTER))
 				.setSource(mappingBuilder).execute().actionGet();
 		return putMappingResponse.isAcknowledged();
 	}
@@ -199,37 +262,15 @@ public class ElasticsearchService {
 					.setTypes(
 							Config.getInstance().getString(
 									Config.WIKIDATA_ENTITY))
-					.addFields("type", "label", "wiki-title", "aliases",
-							"claims.property-id", "claims.object-id")
-					.setQuery(query).setSize(1);
+					.addFields("type", "label", "tok-label", "wiki-title",
+							"aliases", "tok-aliases", "claims.property-id",
+							"claims.object-id").setQuery(query).setSize(1);
 			SearchResponse response = requestBuilder.execute().actionGet();
 			// System.out.println(response);
 
 			if (isResponseValid(response)) {
 				for (SearchHit hit : response.getHits()) {
-					String id = hit.getId();
-					String type = hit.field("type").getValue().toString();
-					String label = hit.field("label").getValue().toString();
-					String wikiTitle = hit.field("wiki-title").getValue()
-							.toString();
-					List<String> aliases = new ArrayList<String>();
-					for (Object object : hit.field("aliases").getValues()) {
-						aliases.add(String.valueOf(object));
-					}
-					List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-					if (hit.field("claims.property-id") != null) {
-						for (int i = 0; i < hit.field("claims.property-id")
-								.getValues().size(); i++) {
-							String propId = hit.field("claims.property-id")
-									.getValues().get(i).toString();
-							String objId = hit.field("claims.object-id")
-									.getValues().get(i).toString();
-							claims.add(new Pair<String, String>(propId, objId));
-						}
-					}
-					Entity entity = new Entity(id, type, label, wikiTitle,
-							aliases, claims);
-					return entity;
+					return createEntity(hit);
 				}
 			}
 
@@ -237,6 +278,36 @@ public class ElasticsearchService {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	public Entity createEntity(SearchHit hit) {
+		String id = hit.getId();
+		String type = hit.field("type").getValue().toString();
+		String label = hit.field("label").getValue().toString();
+		String tokLabel = hit.field("tok-label").getValue().toString();
+		String wikiTitle = hit.field("wiki-title").getValue().toString();
+		List<String> aliases = new ArrayList<String>();
+		for (Object object : hit.field("aliases").getValues()) {
+			aliases.add(String.valueOf(object));
+		}
+		List<String> tokAliases = new ArrayList<String>();
+		for (Object object : hit.field("tok-aliases").getValues()) {
+			tokAliases.add(String.valueOf(object));
+		}
+		List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
+		if (hit.field("claims.property-id") != null) {
+			for (int i = 0; i < hit.field("claims.property-id").getValues()
+					.size(); i++) {
+				String propId = hit.field("claims.property-id").getValues()
+						.get(i).toString();
+				String objId = hit.field("claims.object-id").getValues().get(i)
+						.toString();
+				claims.add(new Pair<String, String>(propId, objId));
+			}
+		}
+		Entity entity = new Entity(id, type, label, tokLabel, wikiTitle,
+				aliases, tokAliases, claims);
+		return entity;
 	}
 
 	public boolean isResponseValid(SearchResponse response) {
@@ -251,8 +322,8 @@ public class ElasticsearchService {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance()
 					.getString(Config.WIKIDATA_INDEX), Config.getInstance()
 					.getString(Config.WIKIDATA_ENTITY), itemId).fields("type",
-					"label", "wiki-title", "aliases", "claims.property-id",
-					"claims.object-id"));
+					"label", "tok-label", "wiki-title", "aliases",
+					"tok-aliases", "claims.property-id", "claims.object-id"));
 		}
 		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
 		for (MultiGetItemResponse multiGetItemResponse : multiResponse
@@ -262,11 +333,18 @@ public class ElasticsearchService {
 				String id = response.getId();
 				String type = response.getField("type").getValue().toString();
 				String label = response.getField("label").getValue().toString();
+				String tokLabel = response.getField("tok-label").getValue()
+						.toString();
 				String wikipediaTitle = response.getField("wiki-title")
 						.getValue().toString();
 				List<String> aliases = new ArrayList<String>();
 				for (Object object : response.getField("aliases").getValues()) {
 					aliases.add(String.valueOf(object));
+				}
+				List<String> tokAliases = new ArrayList<String>();
+				for (Object object : response.getField("tok-aliases")
+						.getValues()) {
+					tokAliases.add(String.valueOf(object));
 				}
 				List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
 				if (response.getField("claims.property-id") != null) {
@@ -279,9 +357,8 @@ public class ElasticsearchService {
 						claims.add(new Pair<String, String>(propId, objId));
 					}
 				}
-				itemList.add(new Entity(id, type, label, wikipediaTitle,
-						aliases, claims));
-
+				itemList.add(new Entity(id, type, label, tokLabel,
+						wikipediaTitle, aliases, tokAliases, claims));
 			}
 		}
 		return itemList;

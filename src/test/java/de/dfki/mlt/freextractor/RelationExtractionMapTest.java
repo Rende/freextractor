@@ -35,8 +35,8 @@ public class RelationExtractionMapTest {
 		String[] aliases = { "was a", "of Oichalia in" };
 
 		List<String> tokenList = Arrays.asList(tokens);
-		Entity property = new Entity("P31", "property", "instance of", "",
-				Arrays.asList(aliases),null);
+		Entity property = new Entity("P31", "property", "instance of", "instance of","",
+				Arrays.asList(aliases),null,null);
 //		Relation relation = map.searchRelation(tokenList, property, 5, "", "", 234);
 //		assertThat(relation.getSurface()).isEqualTo(
 //				"of [[ Oichalia , Trikala | Oichalia ]] in");
