@@ -1,13 +1,14 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple5;
@@ -20,43 +21,50 @@ import de.dfki.lt.tools.tokenizer.annotate.AnnotatedString;
 import de.dfki.lt.tools.tokenizer.output.Outputter;
 import de.dfki.lt.tools.tokenizer.output.Token;
 import de.dfki.mlt.freextractor.App;
+import de.dfki.mlt.freextractor.flink.Entity;
+import de.dfki.mlt.freextractor.flink.Helper;
+import de.dfki.mlt.freextractor.flink.WikiObject;
 
 /**
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusteringMap
+public class ClusterEntryMap
 		extends
 		RichFlatMapFunction<Tuple5<Integer, String, String, String, String>, ClusterEntry> {
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
+	private static final String INSTANCE_OF_RELATION = "P31";
 	private JTok jtok;
 	private Entity subject;
 	private HashMap<String, Entity> entityMap;
 	private HashMap<String, Entity> entityParentMap;
 	private Integer objPos;
 	private Integer subjPos;
+	private Integer objCount;
 
 	// pageId, subjectId, title, sentence, tokenizedSentence
 	@Override
 	public void flatMap(Tuple5<Integer, String, String, String, String> value,
 			Collector<ClusterEntry> out) throws Exception {
-		HashMap<Integer, String> objectMap = getObjectMap(value.f3);
+		List<WikiObject> objectList = getObjectList(value.f3);
 		subject = App.esService.getEntity(value.f1);
+		String tokSentence = removeSubject(value.f4);
 
-		HashMap<String, Integer> hist = createHistogram(value.f4);
 		if (subject != null) {
 			entityMap = collectEntities(subject.getClaims());
-			entityParentMap = getEntityParentMap(objectMap);
+			entityParentMap = getEntityParentMap(objectList);
 			for (Pair<String, String> pair : subject.getClaims()) {
 				Entity property = entityMap.get(pair.getValue0());
 				Entity object = entityMap.get(pair.getValue1());
 				if (object != null && property != null) {
 					ClusterId clusterId = getClusterKey(object, property,
-							objectMap);
+							objectList);
 					if (clusterId != null) {
+						HashMap<String, Integer> hist = createHistogram(removeObjectByIndex(
+								tokSentence, objCount));
 						ClusterEntry entry = new ClusterEntry(clusterId,
 								value.f4, value.f0, subjPos, objPos, hist);
 						out.collect(entry);
@@ -68,9 +76,9 @@ public class ClusteringMap
 
 	public HashMap<String, Integer> createHistogram(String text) {
 		HashMap<String, Integer> hist = new HashMap<String, Integer>();
-		String punctutations = ".,:;*!?[['''''']]|";
+		String punctutations = ".,:;&*!?[['''''']]|";
 		for (String token : text.split(" ")) {
-			if (!punctutations.contains(token)) {
+			if (!punctutations.contains(token) && !containsOnlyDigits(token)) {
 				int count = 0;
 				if (hist.containsKey(token)) {
 					count = hist.get(token);
@@ -82,25 +90,54 @@ public class ClusteringMap
 		return hist;
 	}
 
+	public String removeSubject(String text) {
+		text = text.replaceAll("[''']+.*?[''']+", "");
+		return text;
+	}
+
+	public String removeObjectByIndex(String text, int index) {
+		int count = 0;
+		Pattern p = Pattern.compile("\\[\\[.*?\\]\\]");
+		Matcher m = p.matcher(text);
+		StringBuffer sb = new StringBuffer();
+		while (m.find()) {
+			if (count == index)
+				m.appendReplacement(sb, "");
+			count++;
+		}
+		m.appendTail(sb);
+		return sb.toString();
+	}
+
+	private boolean containsOnlyDigits(final String value) {
+		for (int i = 0; i < value.length(); i++) {
+			if (!Character.isDigit(value.charAt(i))) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public HashMap<String, Entity> getEntityParentMap(
-			HashMap<Integer, String> objectMap) {
+			List<WikiObject> objectList) {
 		List<String> entityIdList = new ArrayList<String>();
 		List<String> parentIdList = new ArrayList<String>();
 
 		for (Pair<String, String> subjClaim : subject.getClaims()) {
-			if (subjClaim.getValue0().equals("P31")) {
+			if (subjClaim.getValue0().equals(INSTANCE_OF_RELATION)) {
 				entityIdList.add(subject.getId());
 				parentIdList.add(subjClaim.getValue1());
 			}
 			Entity object = entityMap.get(subjClaim.getValue1());
 			if (object != null && object.getClaims() != null) {
-				for (String objLabel : objectMap.values()) {
-					if (objLabel.equalsIgnoreCase(Helper
-							.fromStringToWikilabel(object.getLabel()))) {
+				for (WikiObject obj : objectList) {
+					if (obj.getLabel().equalsIgnoreCase(
+							Helper.fromStringToWikilabel(object.getLabel()))) {
 						List<Pair<String, String>> objClaims = object
 								.getClaims();
 						for (Pair<String, String> objClaim : objClaims) {
-							if (objClaim.getValue0().equals("P31")) {
+							if (objClaim.getValue0().equals(
+									INSTANCE_OF_RELATION)) {
 								entityIdList.add(object.getId());
 								parentIdList.add(objClaim.getValue1());
 							}
@@ -125,20 +162,21 @@ public class ClusteringMap
 	}
 
 	private ClusterId getClusterKey(Entity object, Entity property,
-			HashMap<Integer, String> objectMap) {
+			List<WikiObject> objectList) {
 		Entity subjParent = entityParentMap.get(subject.getId());
 		String subjType = "";
 		String objType = "";
+		String relLabel = "";
 		if (subjParent != null) {
 			subjType = subjParent.getLabel();
 		} else {
 			subjType = subject.getLabel();
 		}
 
-		for (Entry<Integer, String> entry : objectMap.entrySet()) {
-			String objLabel = entry.getValue();
-			if (objLabel.equalsIgnoreCase(Helper.fromStringToWikilabel(object
-					.getLabel()))) {
+		for (int i = 0; i < objectList.size(); i++) {
+			WikiObject obj = objectList.get(i);
+			if (obj.getLabel().equalsIgnoreCase(
+					Helper.fromStringToWikilabel(object.getLabel()))) {
 				Entity objParent = entityParentMap.get(object.getId());
 				if (objParent != null) {
 					objType = objParent.getLabel();
@@ -147,8 +185,9 @@ public class ClusteringMap
 				}
 				subjType = Helper.fromLabelToKey(subjType);
 				objType = Helper.fromLabelToKey(objType);
-				String relLabel = Helper.fromLabelToKey(property.getLabel());
-				objPos = entry.getKey();
+				relLabel = Helper.fromLabelToKey(property.getLabel());
+				objPos = obj.getPosition();
+				objCount = i;
 				return new ClusterId(subjType, objType, relLabel);
 			}
 		}
@@ -180,8 +219,13 @@ public class ClusteringMap
 		return entityMap;
 	}
 
-	public HashMap<Integer, String> getObjectMap(String text) {
-		HashMap<Integer, String> objectMap = new HashMap<Integer, String>();
+	/**
+	 * returns the list of objects, sets the subject position in the sentence.
+	 * subject : ''' abc ''' = single token. object: [[ abc ]] = single token.
+	 * the positions are counted based on this schema.
+	 **/
+	public List<WikiObject> getObjectList(String text) {
+		List<WikiObject> objectList = new ArrayList<WikiObject>();
 		AnnotatedString annString = jtok.tokenize(text, "en");
 		List<Token> tokens = Outputter.createTokens(annString);
 
@@ -194,7 +238,10 @@ public class ClusteringMap
 				isSubject = true;
 			} else if (token.getImage().contains("'''") && isSubject) {
 				isSubject = false;
+				subjPos = index;
 				index++;
+			} else if (isSubject) {
+
 			} else if (token.getType().equals("OCROCHE")) {
 				builder = new StringBuilder();
 				builder.append(token.getImage() + " ");
@@ -212,7 +259,7 @@ public class ClusteringMap
 					}
 				}
 				label = Helper.fromStringToWikilabel(label);
-				objectMap.put(index, label);
+				objectList.add(new WikiObject(index, label));
 				inBracket = false;
 				index++;
 			} else if (inBracket) {
@@ -221,7 +268,7 @@ public class ClusteringMap
 				index++;
 			}
 		}
-		return objectMap;
+		return objectList;
 	}
 
 	@Override
@@ -233,6 +280,7 @@ public class ClusteringMap
 		}
 		subjPos = 0;
 		objPos = 0;
+		objCount = 0;
 	}
 
 }

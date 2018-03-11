@@ -6,17 +6,19 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.ClusteringMap;
+import de.dfki.mlt.freextractor.flink.WikiObject;
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 
 /**
  * @author Aydan Rende, DFKI
  *
  */
 public class ClusteringMapTest {
-	private ClusteringMap clusteringMap = new ClusteringMap();
+	private ClusterEntryMap clusteringMap = new ClusterEntryMap();
 
 	public ClusteringMapTest() {
 		clusteringMap.open(null);
@@ -26,7 +28,7 @@ public class ClusteringMapTest {
 	public void testCreateHistogram() {
 		String test = "''' saint esteben ''' be a [[ commune of france | commune ]] in"
 				+ " the [[ pyrénées atlantique ]] [[ department of france | department ]] "
-				+ "in south western [[ france ]] .";
+				+ "in south western [[ france ]] . & '''''' 123 '''''";
 		HashMap<String, Integer> expected = new HashMap<String, Integer>();
 		expected.put("saint", 1);
 		expected.put("esteben", 1);
@@ -47,17 +49,41 @@ public class ClusteringMapTest {
 	}
 
 	@Test
+	public void testRemoveSubject() {
+		String test = "''' subject ''' abc '''''' 123 '''''' def";
+		String expected = " abc  def";
+		String actual = clusteringMap.removeSubject(test);
+		assertThat(actual).isEqualTo(expected);
+	}
+
+	@Test
+	public void testRemoveObjectByIndex() {
+		String test = "be a [[ commune of France | commune ]] in "
+				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
+		String expected = "be a  in "
+				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
+		String actual = clusteringMap.removeObjectByIndex(test, 0);
+		assertThat(actual).isEqualTo(expected);
+		String expected2 = "be a [[ commune of France | commune ]] in "
+				+ "the  [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
+		String actual2 = clusteringMap.removeObjectByIndex(test, 1);
+		assertThat(actual2).isEqualTo(expected2);
+	}
+
+	@Test
 	public void testGetObjectMap() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
-		HashMap<Integer, String> expected = new HashMap<Integer, String>();
-		expected.put(4, "Commune_of_France");
-		expected.put(7, "Pyrénées-atlantique");
-		expected.put(8, "Departments_of_France");
-		expected.put(11, "France");
-		HashMap<Integer, String> actual = clusteringMap.getObjectMap(test);
-		assertThat(actual).isEqualTo(expected);
+
+		List<WikiObject> actual = clusteringMap.getObjectList(test);
+		assertThat(actual).extracting("position").containsExactly(3, 6, 7, 10);
+		assertThat(actual).extracting("label").containsExactly(
+				"Commune_of_France", "Pyrénées-atlantique",
+				"Departments_of_France", "France");
 
 	}
 }

@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import java.io.IOException;
 import java.util.Map;

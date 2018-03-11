@@ -1,7 +1,5 @@
 package de.dfki.mlt.freextractor;
 
-import java.io.IOException;
-
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -9,10 +7,9 @@ import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dfki.mlt.freextractor.flink.ClusterSink;
-import de.dfki.mlt.freextractor.flink.ClusteringMap;
 import de.dfki.mlt.freextractor.flink.SentenceDatasource;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterSink;
 
 /**
  * @author Aydan Rende, DFKI
@@ -28,38 +25,56 @@ public class App {
 
 		DataStream<Tuple5<Integer, String, String, String, String>> stream = env
 				.addSource(new SentenceDatasource());
-		// if (Config.getInstance().getBoolean(Config.RELEX_MODE)) {
-		// env.setParallelism(10);
+
+		env.setParallelism(20);
+
+		stream.flatMap(new ClusterEntryMap()).addSink(
+				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
+						ElasticsearchService.getTransportAddresses(),
+						new ClusterSink()));
+
+		// DataStream<String> stream = env.addSource(new ClusterIdDataSource());
+		// env.setParallelism(20);
 		// try {
-		// // esService.checkAndCreateIndex(Config.getInstance().getString(
-		// // Config.WIKIPEDIA_INDEX));
-		// esService.putMappingForClusterEntry();
-		// esService.putMappingForRelations();
-		//
-		// } catch (IOException | InterruptedException e) {
+		// esService.checkAndCreateIndex(Config.getInstance().getString(
+		// Config.TERM_INDEX));
+		// esService.putMappingForTerms();
+		// } catch (IOException e) {
 		// e.printStackTrace();
 		// }
 		//
-		// stream.flatMap(new RelationExtractionMap()).addSink(
+		// stream.flatMap(new TermCountingMap())
+		// .keyBy(0)
+		// .addSink(
 		// new ElasticsearchSink<>(ElasticsearchService
 		// .getUserConfig(), ElasticsearchService
-		// .getTransportAddresses(), new RelationSink()));
-		// }
-		if (Config.getInstance().getBoolean(Config.CLUSTER_MODE)) {
-			env.setParallelism(10);
-			try {
-				esService.checkAndCreateIndex(Config.getInstance().getString(
-						Config.CLUSTER_ENTRY_INDEX));
-				esService.putMappingForClusterEntry();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		// .getTransportAddresses(), new TermSink()));
 
-			stream.flatMap(new ClusteringMap()).addSink(
-					new ElasticsearchSink<>(ElasticsearchService
-							.getUserConfig(), ElasticsearchService
-							.getTransportAddresses(), new ClusterSink()));
-		}
+		// .countWindow(2000)
+		// .apply(new WindowFunction<Tuple4<String, Integer, Integer, String>,
+		// Tuple4<String, Integer, Integer, String>, Tuple, GlobalWindow>() {
+		// @Override
+		// public void apply(
+		// Tuple key,
+		// GlobalWindow window,
+		// Iterable<Tuple4<String, Integer, Integer, String>> input,
+		// Collector<Tuple4<String, Integer, Integer, String>> out)
+		// throws Exception {
+		// int sum = 0;
+		// for (Tuple4<String, Integer, Integer, String> t : input) {
+		// sum += t.f2;
+		// }
+		// for (Tuple4<String, Integer, Integer, String> t : input) {
+		// t.f2 = sum;
+		// out.collect(t);
+		// }
+		// }
+		// })
+		// // .sum(2)
+		// .addSink(
+		// new ElasticsearchSink<>(ElasticsearchService
+		// .getUserConfig(), ElasticsearchService
+		// .getTransportAddresses(), new TermSink()));
 
 		env.execute("Freextractor");
 

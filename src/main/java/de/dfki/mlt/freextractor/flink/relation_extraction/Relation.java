@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.relation_extraction;
 
 /**
  * @author Aydan Rende, DFKI

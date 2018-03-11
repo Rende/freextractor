@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.relation_extraction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +18,8 @@ import de.dfki.lt.tools.tokenizer.annotate.AnnotatedString;
 import de.dfki.lt.tools.tokenizer.output.Outputter;
 import de.dfki.lt.tools.tokenizer.output.Token;
 import de.dfki.mlt.freextractor.App;
+import de.dfki.mlt.freextractor.flink.Entity;
+import de.dfki.mlt.freextractor.flink.Helper;
 
 /**
  * @author Aydan Rende, DFKI

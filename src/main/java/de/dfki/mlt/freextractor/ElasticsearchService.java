@@ -168,7 +168,8 @@ public class ElasticsearchService {
 				+ mappingBuilder.string());
 		PutMappingResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(
-						Config.getInstance().getString(Config.WIKIPEDIA_RELATION_INDEX))
+						Config.getInstance().getString(
+								Config.WIKIPEDIA_RELATION_INDEX))
 				.setType(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_RELATION))
@@ -211,42 +212,34 @@ public class ElasticsearchService {
 		App.LOG.debug("Mapping for cluster entry: " + mappingBuilder.string());
 		PutMappingResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(
-						Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
+						Config.getInstance().getString(
+								Config.CLUSTER_ENTRY_INDEX))
 				.setType(Config.getInstance().getString(Config.CLUSTER_ENTRY))
 				.setSource(mappingBuilder).execute().actionGet();
 
 		return putMappingResponse.isAcknowledged();
 	}
 
-	public boolean putMappingForClusters() throws IOException {
+	public boolean putMappingForTerms() throws IOException {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
-		XContentBuilder mappingBuilder = XContentFactory
-				.jsonBuilder()
+		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder()
 				.startObject()
-				.startObject(
-						Config.getInstance().getString(Config.RELATION_CLUSTER))
-				.startObject("properties").startObject("subject-type")
-				.field("type", "string").field("index", "not_analyzed")
-				.endObject().startObject("object-type").field("type", "string")
+				.startObject(Config.getInstance().getString(Config.TERM))
+				.startObject("properties").startObject("term")
+				.field("type", "string").endObject().startObject("tf")
+				.field("type", "integer").field("index", "not_analyzed")
+				.endObject().startObject("df").field("type", "integer")
 				.field("index", "not_analyzed").endObject()
-				.startObject("relation-label").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("words").startObject("properties")
-				.startObject("word").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("count").field("type", "integer")
-				.field("index", "not_analyzed").endObject().endObject()
-				.endObject().endObject() // properties
+				.startObject("cluster-id").field("type", "string")
+				.field("index", "not_analyzed").endObject().endObject() // properties
 				.endObject()// documentType
 				.endObject();
 
-		App.LOG.debug("Mapping for relation clusters: "
-				+ mappingBuilder.string());
+		App.LOG.debug("Mapping for terms: " + mappingBuilder.string());
 		PutMappingResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(
-						Config.getInstance().getString(Config.RELATION_CLUSTER_INDEX))
-				.setType(
-						Config.getInstance().getString(Config.RELATION_CLUSTER))
+						Config.getInstance().getString(Config.TERM_INDEX))
+				.setType(Config.getInstance().getString(Config.TERM))
 				.setSource(mappingBuilder).execute().actionGet();
 		return putMappingResponse.isAcknowledged();
 	}
