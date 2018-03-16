@@ -21,7 +21,7 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterSink implements ElasticsearchSinkFunction<ClusterEntry> {
+public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry> {
 	/**
 	 *
 	 */

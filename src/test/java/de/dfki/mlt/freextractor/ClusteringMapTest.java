@@ -10,7 +10,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.WikiObject;
+import de.dfki.mlt.freextractor.flink.SentenceObject;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 
 /**
@@ -54,6 +54,10 @@ public class ClusteringMapTest {
 		String expected = " abc  def";
 		String actual = clusteringMap.removeSubject(test);
 		assertThat(actual).isEqualTo(expected);
+		String testSentence = "'' ''' black dog ''' '' be a song by english rock band [[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
+		String expectedSentence = " be a song by english rock band [[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
+		String actualSentence = clusteringMap.removeSubject(testSentence);
+		assertThat(actualSentence).isEqualTo(expectedSentence);
 	}
 
 	@Test
@@ -79,11 +83,29 @@ public class ClusteringMapTest {
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 
-		List<WikiObject> actual = clusteringMap.getObjectList(test);
+		List<SentenceObject> actual = clusteringMap.getObjectList(test);
 		assertThat(actual).extracting("position").containsExactly(3, 6, 7, 10);
 		assertThat(actual).extracting("label").containsExactly(
 				"Commune_of_France", "Pyrénées-atlantique",
 				"Departments_of_France", "France");
 
 	}
+
+	// @Test
+	// public void testGetEntityParentMap() {
+	// String test =
+	// "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
+	// +
+	// "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+	// + "in south-western [[ France ]] .";
+	// List<WikiObject> wikiObjectList = clusteringMap.getObjectList(test);
+	// // subject id for ''' Saint-Esteben '''
+	// clusteringMap.subject = App.esService.getEntity("Q768391");
+	// clusteringMap.entityMap =
+	// clusteringMap.collectEntities(clusteringMap.subject.getClaims());
+	// HashMap<String, Entity> entityParentMap = clusteringMap
+	// .getEntityParentMap(wikiObjectList);
+	// assertThat(entityParentMap).extracting("");
+	//
+	// }
 }

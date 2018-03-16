@@ -225,13 +225,12 @@ public class ElasticsearchService {
 		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder()
 				.startObject()
 				.startObject(Config.getInstance().getString(Config.TERM))
-				.startObject("properties").startObject("term")
-				.field("type", "string").endObject().startObject("tf")
-				.field("type", "integer").field("index", "not_analyzed")
-				.endObject().startObject("df").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("cluster-id").field("type", "string")
-				.field("index", "not_analyzed").endObject().endObject() // properties
+				.startObject("properties")
+				.startObject("term").field("type", "string").endObject()
+				.startObject("tf").field("type", "double").field("index", "not_analyzed").endObject()
+				.startObject("tf-idf").field("type", "double").field("index", "not_analyzed").endObject()
+				.startObject("cluster-id").field("type", "string").field("index", "not_analyzed").endObject()
+				.endObject() // properties
 				.endObject()// documentType
 				.endObject();
 

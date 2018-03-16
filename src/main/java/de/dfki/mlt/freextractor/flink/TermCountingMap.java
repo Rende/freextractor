@@ -25,7 +25,7 @@ import de.dfki.mlt.freextractor.preferences.Config;
  *
  */
 public class TermCountingMap implements
-		FlatMapFunction<String, Tuple4<String, Integer, Integer, String>> {
+		FlatMapFunction<String, Tuple4<String, Double, Double, String>> {
 	/**
 	 *
 	 */
@@ -34,10 +34,10 @@ public class TermCountingMap implements
 	@SuppressWarnings("deprecation")
 	@Override
 	public void flatMap(String clusterId,
-			Collector<Tuple4<String, Integer, Integer, String>> out)
+			Collector<Tuple4<String, Double, Double, String>> out)
 			throws Exception {
-		int scrollSize = 1000;
-		HashMap<String, Integer> dict = new HashMap<String, Integer>();
+		int scrollSize = 10000;
+		HashMap<String, Double> dict = new HashMap<String, Double>();
 		SearchRequestBuilder builder = App.esService
 				.getClient()
 				.prepareSearch(
@@ -50,17 +50,19 @@ public class TermCountingMap implements
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(scrollSize).execute()
 				.actionGet();
-		int count = 0;
+		double count = 0;
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				List<Object> words = hit.field("words.word").getValues();
-				List<Object> counts = hit.field("words.count").getValues();
-				for (int i = 0; i < words.size(); i++) {
-					count = Integer.parseInt(counts.get(i).toString());
-					if (dict.containsKey(words.get(i))) {
-						count += dict.get(words.get(i));
+				if (hit.field("words.word") != null) {
+					List<Object> words = hit.field("words.word").getValues();
+					List<Object> counts = hit.field("words.count").getValues();
+					for (int i = 0; i < words.size(); i++) {
+						count = Integer.parseInt(counts.get(i).toString());
+						if (dict.containsKey(words.get(i))) {
+							count += dict.get(words.get(i));
+						}
+						dict.put(String.valueOf(words.get(i)), count);
 					}
-					dict.put(String.valueOf(words.get(i)), count);
 				}
 			}
 			response = App.esService.getClient()
@@ -68,10 +70,15 @@ public class TermCountingMap implements
 					.setScroll(new TimeValue(60000)).execute().actionGet();
 		} while (response.getHits().getHits().length != 0);
 
-		for (Entry<String, Integer> entry : dict.entrySet()) {
-
-			out.collect(new Tuple4<String, Integer, Integer, String>(entry
-					.getKey(), entry.getValue(), 1, clusterId));
+		double total = 0;
+		for (Entry<String, Double> entry : dict.entrySet()) {
+			total += entry.getValue();
+		}
+		for (Entry<String, Double> entry : dict.entrySet()) {
+			double tf = entry.getValue() / total;
+			System.out.println("Tf: " + tf);
+			out.collect(new Tuple4<String, Double, Double, String>(entry
+					.getKey(), tf, 0.0, clusterId));
 		}
 
 	}

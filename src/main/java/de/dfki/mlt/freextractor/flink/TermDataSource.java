@@ -5,6 +5,7 @@ package de.dfki.mlt.freextractor.flink;
 
 import java.util.Collection;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -19,49 +20,47 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterIdDataSource implements SourceFunction<String> {
+public class TermDataSource implements SourceFunction<Tuple2<Double, String>> {
 
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
-	private boolean isRunning = true;
+	boolean isRunning = true;
 
 	@Override
-	public void run(SourceContext<String> ctx) throws Exception {
-
+	public void run(SourceContext<Tuple2<Double, String>> ctx) throws Exception {
 		while (isRunning) {
 			SearchResponse response = App.esService
 					.getClient()
 					.prepareSearch(
-							Config.getInstance().getString(
-									Config.CLUSTER_ENTRY_INDEX))
-					.setTypes(
-							Config.getInstance()
-									.getString(Config.CLUSTER_ENTRY))
+							Config.getInstance().getString(Config.TERM_INDEX))
+					.setTypes(Config.getInstance().getString(Config.TERM))
 					.setQuery(QueryBuilders.matchAllQuery())
 					.addAggregation(
-							AggregationBuilders.terms("clusters")
-									.field("cluster-id").size(0))
-					.setFetchSource(true).setExplain(false).execute()
-					.actionGet();
+							AggregationBuilders.terms("ts").field("term")
+									.size(5000000)).setFetchSource(true)
+					.setExplain(false).execute().actionGet();
 
-			Terms terms = response.getAggregations().get("clusters");
+			Long total = (long) 5000000;
+			Terms terms = response.getAggregations().get("ts");
 			Collection<Terms.Bucket> buckets = terms.getBuckets();
 			for (Bucket bucket : buckets) {
-				// if (bucket.getDocCount() > 1)
-				ctx.collect(bucket.getKeyAsString());
-				// System.out.println(bucket.getKeyAsString() + " ("
-				// + bucket.getDocCount() + ")");
+				Long df = bucket.getDocCount();
+				Double idf = Math.log(total / df);
+				ctx.collect(new Tuple2<Double, String>(idf, bucket
+						.getKeyAsString()));
 			}
 			System.out.println("Over");
 			break;
 		}
+
 	}
 
 	@Override
 	public void cancel() {
-		isRunning = false;
+		// TODO Auto-generated method stub
+
 	}
 
 }

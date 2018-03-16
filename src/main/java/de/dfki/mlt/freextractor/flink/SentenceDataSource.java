@@ -18,7 +18,7 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class SentenceDatasource implements
+public class SentenceDataSource implements
 		SourceFunction<Tuple5<Integer, String, String, String, String>> {
 	/**
 	 *

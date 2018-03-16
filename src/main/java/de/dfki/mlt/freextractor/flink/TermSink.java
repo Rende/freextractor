@@ -22,19 +22,18 @@ import de.dfki.mlt.freextractor.preferences.Config;
  *
  */
 public class TermSink implements
-		ElasticsearchSinkFunction<Tuple4<String, Integer, Integer, String>> {
+		ElasticsearchSinkFunction<Tuple4<String, Double, Double, String>> {
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
 	public IndexRequest createIndexRequest(
-			Tuple4<String, Integer, Integer, String> element)
-			throws IOException {
+			Tuple4<String, Double, Double, String> element) throws IOException {
 
 		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
 				.field("term", element.f0).field("tf", element.f1)
-				.field("df", element.f2).field("cluster-id", element.f3)
+				.field("tf-idf", element.f2).field("cluster-id", element.f3)
 				.endObject();
 
 		String json = builder.string();
@@ -46,7 +45,7 @@ public class TermSink implements
 	}
 
 	@Override
-	public void process(Tuple4<String, Integer, Integer, String> element,
+	public void process(Tuple4<String, Double, Double, String> element,
 			RuntimeContext ctx, RequestIndexer indexer) {
 		try {
 			indexer.add(createIndexRequest(element));

@@ -7,11 +7,11 @@ package de.dfki.mlt.freextractor.flink;
  * @author Aydan Rende, DFKI
  *
  */
-public class WikiObject {
+public class SentenceObject {
 	private int position;
 	private String label;
 
-	public WikiObject(int position, String label) {
+	public SentenceObject(int position, String label) {
 		this.position = position;
 		this.label = label;
 	}
