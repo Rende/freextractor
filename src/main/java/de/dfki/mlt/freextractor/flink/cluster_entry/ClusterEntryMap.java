@@ -23,7 +23,6 @@ import de.dfki.lt.tools.tokenizer.output.Token;
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.SentenceObject;
 
 /**
  * @author Aydan Rende, DFKI

@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.term;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -33,6 +33,7 @@ public class DocCountingMap implements
 			Collector<Tuple2<String, Double>> out) throws Exception {
 		Double idf = value.f0;
 		int scrollSize = 10000;
+		@SuppressWarnings("deprecation")
 		SearchRequestBuilder builder = App.esService
 				.getClient()
 				.prepareSearch(

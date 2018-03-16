@@ -10,8 +10,8 @@ import java.util.List;
 
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.SentenceObject;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
+import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceObject;
 
 /**
  * @author Aydan Rende, DFKI

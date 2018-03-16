@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;

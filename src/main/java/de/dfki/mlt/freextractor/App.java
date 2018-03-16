@@ -10,15 +10,15 @@ import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dfki.mlt.freextractor.flink.ClusterIdDataSource;
-import de.dfki.mlt.freextractor.flink.DocCountingMap;
-import de.dfki.mlt.freextractor.flink.SentenceDataSource;
-import de.dfki.mlt.freextractor.flink.TermCountingMap;
-import de.dfki.mlt.freextractor.flink.TermDataSource;
-import de.dfki.mlt.freextractor.flink.TermSink;
-import de.dfki.mlt.freextractor.flink.TfIdfSink;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
+import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
+import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
+import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
+import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
+import de.dfki.mlt.freextractor.flink.term.TermDataSource;
+import de.dfki.mlt.freextractor.flink.term.TermSink;
+import de.dfki.mlt.freextractor.flink.term.TfIdfSink;
 import de.dfki.mlt.freextractor.preferences.Config;
 
 /**
