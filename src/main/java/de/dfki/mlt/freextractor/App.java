@@ -6,10 +6,11 @@ import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSink;
+import org.apache.flink.streaming.connectors.elasticsearch5.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntry;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
 import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
@@ -17,7 +18,6 @@ import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
 import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermDataSource;
-import de.dfki.mlt.freextractor.flink.term.TermSink;
 import de.dfki.mlt.freextractor.flink.term.TfIdfSink;
 import de.dfki.mlt.freextractor.preferences.Config;
 
@@ -32,8 +32,8 @@ public class App {
 	public static void main(String[] args) throws Exception {
 
 		sentenceProcessingApp();
-//		termCountingApp();
-//		docCountingApp();
+		// termCountingApp();
+		// docCountingApp();
 
 	}
 
@@ -52,9 +52,9 @@ public class App {
 		DataStream<Tuple5<Integer, String, String, String, String>> stream = env
 				.addSource(new SentenceDataSource());
 		stream.flatMap(new ClusterEntryMap()).addSink(
-				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(),
-						new ClusterEntrySink()));
+				new ElasticsearchSink<ClusterEntry>(ElasticsearchService
+						.getUserConfig(), ElasticsearchService
+						.getTransportAddresses(), new ClusterEntrySink()));
 		JobExecutionResult result = env.execute("SentenceProcessingApp");
 		return result.isJobExecutionResult();
 	}
@@ -77,10 +77,11 @@ public class App {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		stream.flatMap(new TermCountingMap()).addSink(
-				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(),
-						new TermSink()));
+		stream.flatMap(new TermCountingMap());
+		// .addSink(
+		// new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
+		// ElasticsearchService.getTransportAddresses(),
+		// new TermSink()));
 		JobExecutionResult result = env.execute("termCountingApp");
 		return result.isJobExecutionResult();
 	}

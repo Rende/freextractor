@@ -8,7 +8,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.util.Collector;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -33,14 +32,14 @@ public class DocCountingMap implements
 			Collector<Tuple2<String, Double>> out) throws Exception {
 		Double idf = value.f0;
 		int scrollSize = 10000;
-		@SuppressWarnings("deprecation")
+
 		SearchRequestBuilder builder = App.esService
 				.getClient()
 				.prepareSearch(
 						Config.getInstance().getString(Config.TERM_INDEX))
-				.setSearchType(SearchType.SCAN).setScroll(new TimeValue(60000))
+				.setScroll(new TimeValue(60000))
 				.setTypes(Config.getInstance().getString(Config.TERM))
-				.addFields("tf")
+				.storedFields("tf")
 				.setQuery(QueryBuilders.termQuery("term", value.f1));
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(scrollSize).execute()

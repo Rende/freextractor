@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.flink.hadoop.shaded.com.google.common.collect.ImmutableList;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
@@ -26,16 +25,14 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.javatuples.Pair;
 
 import de.dfki.mlt.freextractor.flink.Entity;
@@ -54,32 +51,21 @@ public class ElasticsearchService {
 
 	public Client getClient() {
 		if (client == null) {
-			Map<String, String> userConfig = getUserConfig();
-			List<InetSocketAddress> transportAddresses = getTransportAddresses();
-			List<TransportAddress> transportNodes;
-			transportNodes = new ArrayList<>(transportAddresses.size());
-			for (InetSocketAddress address : transportAddresses) {
-				transportNodes.add(new InetSocketTransportAddress(address));
-			}
-			Settings settings = Settings.settingsBuilder().put(userConfig)
+			Settings settings = Settings
+					.builder()
+					.put(Config.CLUSTER_NAME,
+							Config.getInstance().getString(Config.CLUSTER_NAME))
 					.build();
-
-			TransportClient transportClient = TransportClient.builder()
-					.settings(settings).build();
-			for (TransportAddress transport : transportNodes) {
-				transportClient.addTransportAddress(transport);
+			try {
+				client = new PreBuiltTransportClient(settings)
+						.addTransportAddress(new InetSocketTransportAddress(
+								InetAddress.getByName("134.96.187.233"), 9300));
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
 			}
-
-			ImmutableList<DiscoveryNode> nodes = ImmutableList
-					.copyOf(transportClient.connectedNodes());
-			if (nodes.isEmpty()) {
-				throw new RuntimeException(
-						"Client is not connected to any Elasticsearch nodes!");
-			}
-
-			client = transportClient;
 		}
 		return client;
+
 	}
 
 	public static Map<String, String> getUserConfig() {
@@ -120,7 +106,7 @@ public class ElasticsearchService {
 			String indexName) {
 		final CreateIndexRequestBuilder createIndexRequestBuilder = indicesAdminClient
 				.prepareCreate(indexName).setSettings(
-						Settings.settingsBuilder()
+						Settings.builder()
 								.put(Config.NUMBER_OF_SHARDS,
 										Config.getInstance().getInt(
 												Config.NUMBER_OF_SHARDS))
@@ -142,24 +128,20 @@ public class ElasticsearchService {
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_RELATION))
 				.startObject("properties").startObject("page-id")
-				.field("type", "integer").field("index", "not_analyzed")
-				.endObject().startObject("subject-id").field("type", "string")
-				.field("index", "not_analyzed").endObject()
+				.field("type", "integer").field("index", "true").endObject()
+				.startObject("subject-id").field("type", "keyword")
+				.field("index", "true").endObject()
 				.startObject("subject-index").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("object-id").field("type", "string")
-				.field("index", "not_analyzed").endObject()
+				.field("index", "true").endObject().startObject("object-id")
+				.field("type", "keyword").field("index", "true").endObject()
 				.startObject("object-index").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("surface").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("start-index").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
+				.field("index", "true").endObject().startObject("surface")
+				.endObject().startObject("start-index")
+				.field("type", "integer").field("index", "true").endObject()
 				.startObject("end-index").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("property-id").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("alias").field("type", "string").endObject()
+				.field("index", "true").endObject().startObject("property-id")
+				.field("type", "keyword").field("index", "true").endObject()
+				.startObject("alias").field("type", "text").endObject()
 				.endObject() // properties
 				.endObject()// documentType
 				.endObject();
@@ -185,27 +167,22 @@ public class ElasticsearchService {
 				.startObject(
 						Config.getInstance().getString(Config.CLUSTER_ENTRY))
 				.startObject("properties").startObject("subj-type")
-				.field("type", "string").field("index", "not_analyzed")
+				.field("type", "keyword").field("index", "true")
 				.field("copy_to", "cluster-id").endObject()
-				.startObject("obj-type").field("type", "string")
-				.field("index", "not_analyzed").field("copy_to", "cluster-id")
-				.endObject().startObject("relation").field("type", "string")
-				.field("index", "not_analyzed").field("copy_to", "cluster-id")
-				.endObject().startObject("cluster-id").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("tok-sent").field("type", "string").endObject()
-				.startObject("page-id").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("subj-pos").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("obj-pos").field("type", "integer")
-				.field("index", "not_analyzed").endObject()
-				.startObject("words").startObject("properties")
-				.startObject("word").field("type", "string")
-				.field("index", "not_analyzed").endObject()
-				.startObject("count").field("type", "integer")
-				.field("index", "not_analyzed").endObject().endObject()
-				.endObject().endObject() // properties
+				.startObject("obj-type").field("type", "keyword")
+				.field("index", "true").field("copy_to", "cluster-id")
+				.endObject().startObject("relation").field("type", "keyword")
+				.field("index", "true").field("copy_to", "cluster-id")
+				.endObject().startObject("cluster-id").field("type", "keyword")
+				.field("index", "true").endObject().startObject("tok-sent")
+				.field("type", "text").endObject().startObject("page-id")
+				.field("type", "integer").endObject().startObject("subj-pos")
+				.field("type", "integer").endObject().startObject("obj-pos")
+				.field("type", "integer").endObject().startObject("words")
+				.startObject("properties").startObject("word")
+				.field("type", "keyword").endObject().startObject("count")
+				.field("type", "integer").endObject().endObject().endObject()
+				.endObject() // properties
 				.endObject() // documentType
 				.endObject();
 
@@ -225,11 +202,11 @@ public class ElasticsearchService {
 		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder()
 				.startObject()
 				.startObject(Config.getInstance().getString(Config.TERM))
-				.startObject("properties")
-				.startObject("term").field("type", "string").endObject()
-				.startObject("tf").field("type", "double").field("index", "not_analyzed").endObject()
-				.startObject("tf-idf").field("type", "double").field("index", "not_analyzed").endObject()
-				.startObject("cluster-id").field("type", "string").field("index", "not_analyzed").endObject()
+				.startObject("properties").startObject("term")
+				.field("type", "text").endObject().startObject("tf")
+				.field("type", "double").endObject().startObject("tf-idf")
+				.field("type", "double").endObject().startObject("cluster-id")
+				.field("type", "keyword").field("index", "true").endObject()
 				.endObject() // properties
 				.endObject()// documentType
 				.endObject();
@@ -254,7 +231,7 @@ public class ElasticsearchService {
 					.setTypes(
 							Config.getInstance().getString(
 									Config.WIKIDATA_ENTITY))
-					.addFields("type", "label", "tok-label", "wiki-title",
+					.storedFields("type", "label", "tok-label", "wiki-title",
 							"aliases", "tok-aliases", "claims.property-id",
 							"claims.object-id").setQuery(query).setSize(1);
 			SearchResponse response = requestBuilder.execute().actionGet();
@@ -313,8 +290,8 @@ public class ElasticsearchService {
 		for (String itemId : idList) {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance()
 					.getString(Config.WIKIDATA_INDEX), Config.getInstance()
-					.getString(Config.WIKIDATA_ENTITY), itemId).fields("type",
-					"label", "tok-label", "wiki-title", "aliases",
+					.getString(Config.WIKIDATA_ENTITY), itemId).storedFields(
+					"type", "label", "tok-label", "wiki-title", "aliases",
 					"tok-aliases", "claims.property-id", "claims.object-id"));
 		}
 		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();

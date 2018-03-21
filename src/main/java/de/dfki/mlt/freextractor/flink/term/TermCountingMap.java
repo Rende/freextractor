@@ -12,7 +12,6 @@ import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.util.Collector;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -31,7 +30,6 @@ public class TermCountingMap implements
 	 */
 	private static final long serialVersionUID = 1L;
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public void flatMap(String clusterId,
 			Collector<Tuple4<String, Double, Double, String>> out)
@@ -43,9 +41,9 @@ public class TermCountingMap implements
 				.prepareSearch(
 						Config.getInstance().getString(
 								Config.CLUSTER_ENTRY_INDEX))
-				.setSearchType(SearchType.SCAN).setScroll(new TimeValue(60000))
+				.setScroll(new TimeValue(60000))
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
-				.addFields("words.word", "words.count")
+				.storedFields("words.word", "words.count")
 				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(scrollSize).execute()

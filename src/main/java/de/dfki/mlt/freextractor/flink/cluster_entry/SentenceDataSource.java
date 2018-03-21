@@ -6,7 +6,6 @@ package de.dfki.mlt.freextractor.flink.cluster_entry;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -26,9 +25,9 @@ public class SentenceDataSource implements
 	private static final long serialVersionUID = 1L;
 	boolean isRunning = true;
 
-	@SuppressWarnings("deprecation")
 	@Override
-	public void run(SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
+	public void run(
+			SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
 			throws Exception {
 		int scrollSize = 1000;
 		SearchResponse response = App.esService
@@ -36,14 +35,13 @@ public class SentenceDataSource implements
 				.prepareSearch(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE_INDEX))
-				.setSearchType(SearchType.SCAN)
 				.setScroll(new TimeValue(60000))
 				.setTypes(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE))
-				.addFields("page-id", "title", "subject-id", "sentence", "tok-sentence")
-				.setQuery(QueryBuilders.matchAllQuery()).setSize(scrollSize)
-				.execute().actionGet();
+				.storedFields("page-id", "title", "subject-id", "sentence",
+						"tok-sentence").setQuery(QueryBuilders.matchAllQuery())
+				.setSize(scrollSize).execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
 				Integer pageId = Integer.parseInt(hit.field("page-id")
@@ -52,9 +50,10 @@ public class SentenceDataSource implements
 						.toString();
 				String title = hit.field("title").getValue().toString();
 				String sentence = hit.field("sentence").getValue().toString();
-				String tokenizedSentence = hit.field("tok-sentence").getValue().toString();
-				ctx.collect(new Tuple5<Integer, String, String, String,String>(pageId,
-						subjectId, title, sentence,tokenizedSentence));
+				String tokenizedSentence = hit.field("tok-sentence").getValue()
+						.toString();
+				ctx.collect(new Tuple5<Integer, String, String, String, String>(
+						pageId, subjectId, title, sentence, tokenizedSentence));
 			}
 			response = App.esService.getClient()
 					.prepareSearchScroll(response.getScrollId())

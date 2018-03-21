@@ -13,10 +13,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<slf4jVersion>1.7.10</slf4jVersion>
-		<flink.version>1.1.4</flink.version>
+		<flink.version>1.4.2</flink.version>
 		<javatuples.version>1.2</javatuples.version>
 	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.javatuples</groupId>
@@ -31,17 +30,17 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-streaming-java_2.10</artifactId>
+			<artifactId>flink-streaming-java_2.11</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-clients_2.10</artifactId>
+			<artifactId>flink-clients_2.11</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-elasticsearch2_2.10</artifactId>
+			<artifactId>flink-connector-elasticsearch5_2.11</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
 		<dependency>
@@ -55,11 +54,6 @@
 			<artifactId>assertj-core</artifactId>
 			<version>3.8.0</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.elasticsearch</groupId>
-			<artifactId>elasticsearch</artifactId>
-			<version>2.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

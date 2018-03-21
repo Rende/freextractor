@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSinkFunction;
-import org.apache.flink.streaming.connectors.elasticsearch2.RequestIndexer;
+import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchSinkFunction;
+import org.apache.flink.streaming.connectors.elasticsearch.RequestIndexer;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -21,7 +21,8 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry> {
+public class ClusterEntrySink implements
+		ElasticsearchSinkFunction<ClusterEntry> {
 	/**
 	 *
 	 */
