@@ -55,41 +55,31 @@ public class ClusterEntryMap
 			String tokSentence = removeSubject(value.f4);
 			entityMap = collectEntities(subject.getClaims());
 			entityParentMap = getEntityParentMap(objectList);
-			String subjType = getSubjectType();
-			for (Pair<String, String> pair : subject.getClaims()) {
-				Entity property = entityMap.get(pair.getValue0());
-				Entity object = entityMap.get(pair.getValue1());
-				if (object != null && property != null) {
-					ClusterId clusterId = getClusterKey(subjType, object,
-							property, objectList);
-					if (clusterId != null) {
-						HashMap<String, Integer> hist = createHistogram(removeObjectByIndex(
-								tokSentence, objectIndexInSentence));
-						ClusterEntry entry = new ClusterEntry(clusterId,
-								value.f4, value.f0, subjectPosition,
-								objectPosition, hist);
-						out.collect(entry);
-					} else {
-						// App.LOG.info("No cluster entry for subject id: "
-						// + subject.getId() + " with object "
-						// + object.getId());
+			Entity subjectParent = entityParentMap.get(subject.getId());
+			String subjectType = getEntityType(subjectParent, subject);
+			if (subjectType != null) {
+				for (Pair<String, String> pair : subject.getClaims()) {
+					Entity property = entityMap.get(pair.getValue0());
+					Entity object = entityMap.get(pair.getValue1());
+					if (object != null && property != null) {
+						ClusterId clusterId = getClusterKey(subjectType,
+								object, property, objectList);
+						if (clusterId != null) {
+							HashMap<String, Integer> hist = createHistogram(removeObjectByIndex(
+									tokSentence, objectIndexInSentence));
+							ClusterEntry entry = new ClusterEntry(clusterId,
+									value.f4, value.f0, subjectPosition,
+									objectPosition, hist);
+							out.collect(entry);
+						} else {
+							// App.LOG.info("No cluster entry for subject id: "
+							// + subject.getId() + " with object "
+							// + object.getId());
+						}
 					}
 				}
 			}
 		}
-	}
-
-	private String getSubjectType() {
-		Entity subjectParent = entityParentMap.get(subject.getId());
-		String subjectType = "";
-		if (subjectParent != null) {
-			subjectType = subjectParent.getLabel();
-		} else {
-			App.LOG.info("No parent for subject: " + subject.getId());
-			subjectType = subject.getLabel();
-		}
-		subjectType = Helper.fromLabelToKey(subjectType);
-		return subjectType;
 	}
 
 	public HashMap<String, Integer> createHistogram(String text) {
@@ -191,13 +181,15 @@ public class ClusterEntryMap
 			if (sentenceObject.getLabel().equalsIgnoreCase(
 					Helper.fromStringToWikilabel(object.getLabel()))) {
 				Entity objectParent = entityParentMap.get(object.getId());
-				String objectType = Helper.fromLabelToKey(getEntityType(
-						objectParent, object));
-				String relationLabel = Helper.fromLabelToKey(property
-						.getLabel());
-				objectPosition = sentenceObject.getPosition();
-				objectIndexInSentence = i;
-				return new ClusterId(subjectType, objectType, relationLabel);
+				String objectType = getEntityType(objectParent, object);
+				if (objectType != null) {
+					objectType = Helper.fromLabelToKey(objectType);
+					String relationLabel = Helper.fromLabelToKey(property
+							.getLabel());
+					objectPosition = sentenceObject.getPosition();
+					objectIndexInSentence = i;
+					return new ClusterId(subjectType, objectType, relationLabel);
+				}
 			}
 		}
 		return null;
@@ -207,8 +199,8 @@ public class ClusterEntryMap
 		if (parentEntity != null) {
 			return parentEntity.getLabel();
 		} else {
-			App.LOG.info("No parent for object: " + entity.getId());
-			return entity.getLabel();
+			// App.LOG.info("No parent for object: " + entity.getId());
+			return null;
 		}
 	}
 
