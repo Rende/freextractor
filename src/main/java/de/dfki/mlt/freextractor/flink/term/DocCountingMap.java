@@ -39,7 +39,6 @@ public class DocCountingMap implements
 						Config.getInstance().getString(Config.TERM_INDEX))
 				.setScroll(new TimeValue(60000))
 				.setTypes(Config.getInstance().getString(Config.TERM))
-				.storedFields("tf")
 				.setQuery(QueryBuilders.termQuery("term", value.f1));
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(scrollSize).execute()
@@ -47,7 +46,7 @@ public class DocCountingMap implements
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
 				String id = hit.getId();
-				Double tf = hit.field("tf").getValue();
+				Double tf = (Double) hit.getSource().get("tf");
 				Double tfIdf = tf * idf;
 				out.collect(new Tuple2<String, Double>(id, tfIdf));
 			}

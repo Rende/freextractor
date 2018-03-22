@@ -42,7 +42,7 @@ public class ClusterIdDataSource implements SourceFunction<String> {
 					.setQuery(QueryBuilders.matchAllQuery())
 					.addAggregation(
 							AggregationBuilders.terms("clusters")
-									.field("cluster-id").size(0))
+									.field("cluster-id").size(3310106))
 					.setFetchSource(true).setExplain(false).execute()
 					.actionGet();
 

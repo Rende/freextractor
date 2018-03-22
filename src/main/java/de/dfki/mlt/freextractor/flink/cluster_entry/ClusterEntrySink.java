@@ -35,6 +35,7 @@ public class ClusterEntrySink implements
 				.field("subj-type", clusterEntry.getClusterId().getSubjType())
 				.field("obj-type", clusterEntry.getClusterId().getObjType())
 				.field("relation", clusterEntry.getClusterId().getRelLabel())
+				.field("cluster-id", clusterEntry.getClusterId().toString())
 				.field("tok-sent", clusterEntry.getTokenizedSentence())
 				.field("page-id", clusterEntry.getPageId())
 				.field("subj-pos", clusterEntry.getSubjPos())

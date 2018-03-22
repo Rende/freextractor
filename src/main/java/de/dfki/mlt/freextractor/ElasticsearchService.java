@@ -14,6 +14,7 @@ import java.util.Map;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -96,10 +97,18 @@ public class ElasticsearchService {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
 		final IndicesExistsResponse indexExistReponse = indicesAdminClient
 				.prepareExists(indexName).execute().actionGet();
-		if (!indexExistReponse.isExists()) {
-			result = createIndex(indicesAdminClient, indexName);
+		if (indexExistReponse.isExists()) {
+			deleteIndex(indicesAdminClient, indexName);
 		}
+		result = createIndex(indicesAdminClient, indexName);
 		return result;
+	}
+
+	private void deleteIndex(IndicesAdminClient indicesAdminClient,
+			String indexName) {
+		final DeleteIndexRequestBuilder delIdx = indicesAdminClient
+				.prepareDelete(indexName);
+		delIdx.execute().actionGet();
 	}
 
 	private boolean createIndex(IndicesAdminClient indicesAdminClient,
@@ -167,13 +176,11 @@ public class ElasticsearchService {
 				.startObject(
 						Config.getInstance().getString(Config.CLUSTER_ENTRY))
 				.startObject("properties").startObject("subj-type")
-				.field("type", "keyword").field("index", "true")
-				.field("copy_to", "cluster-id").endObject()
+				.field("type", "keyword").field("index", "true").endObject()
 				.startObject("obj-type").field("type", "keyword")
-				.field("index", "true").field("copy_to", "cluster-id")
-				.endObject().startObject("relation").field("type", "keyword")
-				.field("index", "true").field("copy_to", "cluster-id")
-				.endObject().startObject("cluster-id").field("type", "keyword")
+				.field("index", "true").endObject().startObject("relation")
+				.field("type", "keyword").field("index", "true").endObject()
+				.startObject("cluster-id").field("type", "keyword")
 				.field("index", "true").endObject().startObject("tok-sent")
 				.field("type", "text").endObject().startObject("page-id")
 				.field("type", "integer").endObject().startObject("subj-pos")
@@ -203,11 +210,11 @@ public class ElasticsearchService {
 				.startObject()
 				.startObject(Config.getInstance().getString(Config.TERM))
 				.startObject("properties").startObject("term")
-				.field("type", "text").endObject().startObject("tf")
-				.field("type", "double").endObject().startObject("tf-idf")
-				.field("type", "double").endObject().startObject("cluster-id")
 				.field("type", "keyword").field("index", "true").endObject()
-				.endObject() // properties
+				.startObject("tf").field("type", "float").endObject()
+				.startObject("tf-idf").field("type", "float").endObject()
+				.startObject("cluster-id").field("type", "keyword")
+				.field("index", "true").endObject().endObject() // properties
 				.endObject()// documentType
 				.endObject();
 
@@ -222,7 +229,7 @@ public class ElasticsearchService {
 
 	public Entity getEntity(String entityId) {
 		QueryBuilder query = QueryBuilders.termQuery("_id", entityId);
-		// System.out.println(query);
+		// System.out.println("getEntity query: " + query);
 		try {
 			SearchRequestBuilder requestBuilder = getClient()
 					.prepareSearch(
@@ -230,12 +237,11 @@ public class ElasticsearchService {
 									Config.WIKIDATA_INDEX))
 					.setTypes(
 							Config.getInstance().getString(
-									Config.WIKIDATA_ENTITY))
-					.storedFields("type", "label", "tok-label", "wiki-title",
-							"aliases", "tok-aliases", "claims.property-id",
-							"claims.object-id").setQuery(query).setSize(1);
+									Config.WIKIDATA_ENTITY)).setQuery(query)
+					.setSize(1);
+			// System.out.println(requestBuilder);
 			SearchResponse response = requestBuilder.execute().actionGet();
-			// System.out.println(response);
+			// System.out.println("getEntity response: " + response);
 
 			if (isResponseValid(response)) {
 				for (SearchHit hit : response.getHits()) {
@@ -249,29 +255,27 @@ public class ElasticsearchService {
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
 	public Entity createEntity(SearchHit hit) {
 		String id = hit.getId();
-		String type = hit.field("type").getValue().toString();
-		String label = hit.field("label").getValue().toString();
-		String tokLabel = hit.field("tok-label").getValue().toString();
-		String wikiTitle = hit.field("wiki-title").getValue().toString();
-		List<String> aliases = new ArrayList<String>();
-		for (Object object : hit.field("aliases").getValues()) {
-			aliases.add(String.valueOf(object));
-		}
-		List<String> tokAliases = new ArrayList<String>();
-		for (Object object : hit.field("tok-aliases").getValues()) {
-			tokAliases.add(String.valueOf(object));
-		}
+		String type = hit.getSource().get("type").toString();
+		String label = hit.getSource().get("label").toString();
+		String tokLabel = hit.getSource().get("tok-label").toString();
+		String wikiTitle = hit.getSource().get("wiki-title").toString();
+		List<String> aliases = (ArrayList<String>) hit.getSource().get(
+				"aliases");
+		List<String> tokAliases = (ArrayList<String>) hit.getSource().get(
+				"tok-aliases");
+
 		List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-		if (hit.field("claims.property-id") != null) {
-			for (int i = 0; i < hit.field("claims.property-id").getValues()
-					.size(); i++) {
-				String propId = hit.field("claims.property-id").getValues()
-						.get(i).toString();
-				String objId = hit.field("claims.object-id").getValues().get(i)
-						.toString();
-				claims.add(new Pair<String, String>(propId, objId));
+		List<Map<String, String>> claimMap = (List<Map<String, String>>) hit
+				.getSource().get("claims");
+		if (claimMap != null) {
+			// System.out.println(claimMap);
+			for (Map<String, String> entry : claimMap) {
+				String propertyId = entry.get("property-id");
+				String objectId = entry.get("object-id");
+				claims.add(new Pair<String, String>(propertyId, objectId));
 			}
 		}
 		Entity entity = new Entity(id, type, label, tokLabel, wikiTitle,
@@ -283,6 +287,7 @@ public class ElasticsearchService {
 		return response != null && response.getHits().totalHits() > 0;
 	}
 
+	@SuppressWarnings("unchecked")
 	public List<Entity> getMultiEntities(List<String> idList) {
 
 		List<Entity> itemList = new ArrayList<Entity>();
@@ -290,40 +295,35 @@ public class ElasticsearchService {
 		for (String itemId : idList) {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance()
 					.getString(Config.WIKIDATA_INDEX), Config.getInstance()
-					.getString(Config.WIKIDATA_ENTITY), itemId).storedFields(
-					"type", "label", "tok-label", "wiki-title", "aliases",
-					"tok-aliases", "claims.property-id", "claims.object-id"));
+					.getString(Config.WIKIDATA_ENTITY), itemId));
 		}
 		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
 		for (MultiGetItemResponse multiGetItemResponse : multiResponse
 				.getResponses()) {
 			GetResponse response = multiGetItemResponse.getResponse();
+			// System.out.println("getMultiEntities response: " + response);
 			if (response.isExists()) {
 				String id = response.getId();
-				String type = response.getField("type").getValue().toString();
-				String label = response.getField("label").getValue().toString();
-				String tokLabel = response.getField("tok-label").getValue()
+				String type = response.getSource().get("type").toString();
+				String label = response.getSource().get("label").toString();
+				String tokLabel = response.getSource().get("tok-label")
 						.toString();
-				String wikipediaTitle = response.getField("wiki-title")
-						.getValue().toString();
-				List<String> aliases = new ArrayList<String>();
-				for (Object object : response.getField("aliases").getValues()) {
-					aliases.add(String.valueOf(object));
-				}
-				List<String> tokAliases = new ArrayList<String>();
-				for (Object object : response.getField("tok-aliases")
-						.getValues()) {
-					tokAliases.add(String.valueOf(object));
-				}
+				String wikipediaTitle = response.getSource().get("wiki-title")
+						.toString();
+				List<String> aliases = (ArrayList<String>) response.getSource()
+						.get("aliases");
+				List<String> tokAliases = (ArrayList<String>) response
+						.getSource().get("tok-aliases");
 				List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-				if (response.getField("claims.property-id") != null) {
-					for (int i = 0; i < response.getField("claims.property-id")
-							.getValues().size(); i++) {
-						String propId = response.getField("claims.property-id")
-								.getValues().get(i).toString();
-						String objId = response.getField("claims.object-id")
-								.getValues().get(i).toString();
-						claims.add(new Pair<String, String>(propId, objId));
+				List<Map<String, String>> claimMap = (List<Map<String, String>>) response
+						.getSource().get("claims");
+				if (claimMap != null) {
+					// System.out.println(claimMap);
+					for (Map<String, String> entry : claimMap) {
+						String propertyId = entry.get("property-id");
+						String objectId = entry.get("object-id");
+						claims.add(new Pair<String, String>(propertyId,
+								objectId));
 					}
 				}
 				itemList.add(new Entity(id, type, label, tokLabel,

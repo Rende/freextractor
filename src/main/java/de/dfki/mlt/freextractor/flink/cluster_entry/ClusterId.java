@@ -63,4 +63,8 @@ public class ClusterId {
 		this.relLabel = relLabel;
 	}
 
+	public String toString() {
+		return this.objType + " " + this.subjType + " " + this.relLabel;
+	}
+
 }

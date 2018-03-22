@@ -5,6 +5,7 @@ package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -30,7 +31,7 @@ public class SentenceDataSource implements
 			SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
 			throws Exception {
 		int scrollSize = 1000;
-		SearchResponse response = App.esService
+		SearchRequestBuilder request = App.esService
 				.getClient()
 				.prepareSearch(
 						Config.getInstance().getString(
@@ -39,18 +40,23 @@ public class SentenceDataSource implements
 				.setTypes(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE))
+				.setFetchSource(
+						new String[] { "page-id", "title", "subject-id",
+								"sentence", "tok-sentence" }, null)
 				.storedFields("page-id", "title", "subject-id", "sentence",
 						"tok-sentence").setQuery(QueryBuilders.matchAllQuery())
-				.setSize(scrollSize).execute().actionGet();
+				.setSize(scrollSize);
+		System.out.println(request);
+		SearchResponse response = request.execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				Integer pageId = Integer.parseInt(hit.field("page-id")
-						.getValue().toString());
-				String subjectId = hit.field("subject-id").getValue()
-						.toString();
-				String title = hit.field("title").getValue().toString();
-				String sentence = hit.field("sentence").getValue().toString();
-				String tokenizedSentence = hit.field("tok-sentence").getValue()
+
+				Integer pageId = Integer.parseInt(hit.getSource()
+						.get("page-id").toString());
+				String subjectId = hit.getSource().get("subject-id").toString();
+				String title = hit.getSource().get("title").toString();
+				String sentence = hit.getSource().get("sentence").toString();
+				String tokenizedSentence = hit.getSource().get("tok-sentence")
 						.toString();
 				ctx.collect(new Tuple5<Integer, String, String, String, String>(
 						pageId, subjectId, title, sentence, tokenizedSentence));

@@ -39,10 +39,10 @@ public class TermDataSource implements SourceFunction<Tuple2<Double, String>> {
 					.setQuery(QueryBuilders.matchAllQuery())
 					.addAggregation(
 							AggregationBuilders.terms("ts").field("term")
-									.size(5000000)).setFetchSource(true)
+									.size(6957020)).setFetchSource(true)
 					.setExplain(false).execute().actionGet();
 
-			Long total = (long) 5000000;
+			Long total = (long) 6957020;
 			Terms terms = response.getAggregations().get("ts");
 			Collection<Terms.Bucket> buckets = terms.getBuckets();
 			for (Bucket bucket : buckets) {

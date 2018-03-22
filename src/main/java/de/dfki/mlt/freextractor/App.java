@@ -1,7 +1,5 @@
 package de.dfki.mlt.freextractor;
 
-import java.io.IOException;
-
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -18,6 +16,7 @@ import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
 import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermDataSource;
+import de.dfki.mlt.freextractor.flink.term.TermSink;
 import de.dfki.mlt.freextractor.flink.term.TfIdfSink;
 import de.dfki.mlt.freextractor.preferences.Config;
 
@@ -31,9 +30,9 @@ public class App {
 
 	public static void main(String[] args) throws Exception {
 
-		sentenceProcessingApp();
+		// sentenceProcessingApp();
 		// termCountingApp();
-		// docCountingApp();
+		docCountingApp();
 
 	}
 
@@ -48,7 +47,10 @@ public class App {
 	public static boolean sentenceProcessingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
+		esService.checkAndCreateIndex(Config.getInstance().getString(
+				Config.CLUSTER_ENTRY_INDEX));
+		esService.putMappingForClusterEntry();
 		DataStream<Tuple5<Integer, String, String, String, String>> stream = env
 				.addSource(new SentenceDataSource());
 		stream.flatMap(new ClusterEntryMap()).addSink(
@@ -68,20 +70,15 @@ public class App {
 	public static boolean termCountingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
 		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
-		try {
-			esService.checkAndCreateIndex(Config.getInstance().getString(
-					Config.TERM_INDEX));
-			esService.putMappingForTerms();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		stream.flatMap(new TermCountingMap());
-		// .addSink(
-		// new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-		// ElasticsearchService.getTransportAddresses(),
-		// new TermSink()));
+		esService.checkAndCreateIndex(Config.getInstance().getString(
+				Config.TERM_INDEX));
+		esService.putMappingForTerms();
+		stream.flatMap(new TermCountingMap()).addSink(
+				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
+						ElasticsearchService.getTransportAddresses(),
+						new TermSink()));
 		JobExecutionResult result = env.execute("termCountingApp");
 		return result.isJobExecutionResult();
 	}
@@ -94,7 +91,7 @@ public class App {
 	public static boolean docCountingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
 		env.addSource(new TermDataSource())
 				.flatMap(new DocCountingMap())
 				.addSink(

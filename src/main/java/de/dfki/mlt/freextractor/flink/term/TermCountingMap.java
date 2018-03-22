@@ -5,6 +5,7 @@ package de.dfki.mlt.freextractor.flink.term;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -30,6 +31,7 @@ public class TermCountingMap implements
 	 */
 	private static final long serialVersionUID = 1L;
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void flatMap(String clusterId,
 			Collector<Tuple4<String, Double, Double, String>> out)
@@ -43,25 +45,24 @@ public class TermCountingMap implements
 								Config.CLUSTER_ENTRY_INDEX))
 				.setScroll(new TimeValue(60000))
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
-				.storedFields("words.word", "words.count")
 				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(scrollSize).execute()
 				.actionGet();
-		double count = 0;
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				if (hit.field("words.word") != null) {
-					List<Object> words = hit.field("words.word").getValues();
-					List<Object> counts = hit.field("words.count").getValues();
-					for (int i = 0; i < words.size(); i++) {
-						count = Integer.parseInt(counts.get(i).toString());
-						if (dict.containsKey(words.get(i))) {
-							count += dict.get(words.get(i));
-						}
-						dict.put(String.valueOf(words.get(i)), count);
+				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit
+						.getSource().get("words");
+				for (Map<Object, Object> entry : wordMap) {
+					String word = (String) entry.get("word");
+					Integer count = (Integer) entry.get("count");
+					Double dblCount = Double.parseDouble(count.toString());
+					if (dict.containsKey(word)) {
+						dblCount += dict.get(word);
 					}
+					dict.put(String.valueOf(word), dblCount);
 				}
+
 			}
 			response = App.esService.getClient()
 					.prepareSearchScroll(response.getScrollId())
