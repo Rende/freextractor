@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,9 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.javatuples.Pair;
 
@@ -318,7 +322,6 @@ public class ElasticsearchService {
 				List<Map<String, String>> claimMap = (List<Map<String, String>>) response
 						.getSource().get("claims");
 				if (claimMap != null) {
-					// System.out.println(claimMap);
 					for (Map<String, String> entry : claimMap) {
 						String propertyId = entry.get("property-id");
 						String objectId = entry.get("object-id");
@@ -333,4 +336,32 @@ public class ElasticsearchService {
 		return itemList;
 	}
 
+	public Collection<Terms.Bucket> getClusters() {
+		SearchResponse response = App.esService
+				.getClient()
+				.prepareSearch(
+						Config.getInstance().getString(
+								Config.CLUSTER_ENTRY_INDEX))
+				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
+				.setQuery(QueryBuilders.matchAllQuery())
+				.addAggregation(
+						AggregationBuilders.terms("clusters")
+								.field("cluster-id").size(Integer.MAX_VALUE))
+				.setFetchSource(true).setExplain(false).execute().actionGet();
+
+		Terms terms = response.getAggregations().get("clusters");
+		Collection<Terms.Bucket> buckets = terms.getBuckets();
+		return buckets;
+	}
+
+	public long getClusterNumber() {
+		int clusterCount = 0;
+		for (Bucket bucket : getClusters()) {
+			if (bucket.getDocCount() >= Config.getInstance().getInt(
+					Config.MIN_CLUSTER_SIZE)) {
+				clusterCount++;
+			}
+		}
+		return clusterCount;
+	}
 }
