@@ -8,63 +8,64 @@ package de.dfki.mlt.freextractor.flink.cluster_entry;
  *
  */
 public class ClusterId {
-	private String subjType;
-	private String objType;
-	private String relLabel;
+	private String subjectType;
+	private String objectType;
+	private String relationLabel;
 
-	public ClusterId(String subjType, String objType, String relLabel) {
-		this.subjType = subjType;
-		this.objType = objType;
-		this.relLabel = relLabel;
+	public ClusterId(String subjectType, String objectType, String relationLabel) {
+		this.subjectType = subjectType;
+		this.objectType = objectType;
+		this.relationLabel = relationLabel;
 	}
 
 	/**
-	 * @return the subjType
+	 * @return the subjectType
 	 */
-	public String getSubjType() {
-		return subjType;
+	public String getSubjectType() {
+		return subjectType;
 	}
 
 	/**
-	 * @return the objType
+	 * @return the objectType
 	 */
-	public String getObjType() {
-		return objType;
+	public String getObjectType() {
+		return objectType;
 	}
 
 	/**
-	 * @return the relLabel
+	 * @return the relationLabel
 	 */
-	public String getRelLabel() {
-		return relLabel;
+	public String getRelationLabel() {
+		return relationLabel;
 	}
 
 	/**
-	 * @param subjType
-	 *            the subjType to set
+	 * @param subjectType
+	 *            the subjectType to set
 	 */
-	public void setSubjType(String subjType) {
-		this.subjType = subjType;
+	public void setSubjectType(String subjectType) {
+		this.subjectType = subjectType;
 	}
 
 	/**
-	 * @param objType
-	 *            the objType to set
+	 * @param objectType
+	 *            the objectType to set
 	 */
-	public void setObjType(String objType) {
-		this.objType = objType;
+	public void setObjectType(String objectType) {
+		this.objectType = objectType;
 	}
 
 	/**
-	 * @param relLabel
-	 *            the relLabel to set
+	 * @param relationLabel
+	 *            the relationLabel to set
 	 */
-	public void setRelLabel(String relLabel) {
-		this.relLabel = relLabel;
+	public void setRelationLabel(String relationLabel) {
+		this.relationLabel = relationLabel;
 	}
 
 	public String toString() {
-		return this.objType + " " + this.subjType + " " + this.relLabel;
+		return this.subjectType + " " + this.objectType + " "
+				+ this.relationLabel;
 	}
 
 }
