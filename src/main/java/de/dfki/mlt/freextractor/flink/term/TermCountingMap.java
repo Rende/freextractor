@@ -36,7 +36,6 @@ public class TermCountingMap implements
 	public void flatMap(String clusterId,
 			Collector<Tuple4<String, Double, Double, String>> out)
 			throws Exception {
-		int scrollSize = 10000;
 		HashMap<String, Double> dict = new HashMap<String, Double>();
 		SearchRequestBuilder builder = App.esService
 				.getClient()
@@ -47,8 +46,9 @@ public class TermCountingMap implements
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
 				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
 		System.out.println(builder.toString());
-		SearchResponse response = builder.setSize(scrollSize).execute()
-				.actionGet();
+		SearchResponse response = builder
+				.setSize(Config.getInstance().getInt(Config.SCROLL_SIZE))
+				.execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
 				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit
@@ -75,7 +75,6 @@ public class TermCountingMap implements
 		}
 		for (Entry<String, Double> entry : dict.entrySet()) {
 			double tf = entry.getValue() / total;
-			System.out.println("Tf: " + tf);
 			out.collect(new Tuple4<String, Double, Double, String>(entry
 					.getKey(), tf, 0.0, clusterId));
 		}

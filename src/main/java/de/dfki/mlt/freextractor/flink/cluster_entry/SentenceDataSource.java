@@ -30,7 +30,6 @@ public class SentenceDataSource implements
 	public void run(
 			SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
 			throws Exception {
-		int scrollSize = 1000;
 		SearchRequestBuilder request = App.esService
 				.getClient()
 				.prepareSearch(
@@ -40,13 +39,8 @@ public class SentenceDataSource implements
 				.setTypes(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE))
-				.setFetchSource(
-						new String[] { "page-id", "title", "subject-id",
-								"sentence", "tok-sentence" }, null)
-				.storedFields("page-id", "title", "subject-id", "sentence",
-						"tok-sentence").setQuery(QueryBuilders.matchAllQuery())
-				.setSize(scrollSize);
-		System.out.println(request);
+				.setQuery(QueryBuilders.matchAllQuery())
+				.setSize(Config.getInstance().getInt(Config.SCROLL_SIZE));
 		SearchResponse response = request.execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
@@ -58,8 +52,13 @@ public class SentenceDataSource implements
 				String sentence = hit.getSource().get("sentence").toString();
 				String tokenizedSentence = hit.getSource().get("tok-sentence")
 						.toString();
-				ctx.collect(new Tuple5<Integer, String, String, String, String>(
-						pageId, subjectId, title, sentence, tokenizedSentence));
+				// TODO: garbage sentences have to be removed in sentence
+				// extraction app !!!
+				if (sentence.length() > 0 && !sentence.contains("may refer to")) {
+					ctx.collect(new Tuple5<Integer, String, String, String, String>(
+							pageId, subjectId, title, sentence,
+							tokenizedSentence));
+				}
 			}
 			response = App.esService.getClient()
 					.prepareSearchScroll(response.getScrollId())
