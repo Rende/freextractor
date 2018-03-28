@@ -28,20 +28,19 @@ public class ClusteringMapTest {
 	public void testCreateHistogram() {
 		String test = "''' saint esteben ''' be a [[ commune of france | commune ]] in"
 				+ " the [[ pyrénées atlantique ]] [[ department of france | department ]] "
-				+ "in south western [[ france ]] . & '''''' 123 '''''";
+				+ "in south western [[ france ]] + - / * . & '''''' 123 '''''";
 		HashMap<String, Integer> expected = new HashMap<String, Integer>();
 		expected.put("saint", 1);
 		expected.put("esteben", 1);
 		expected.put("be", 1);
 		expected.put("a", 1);
-		expected.put("commune", 2);
+		expected.put("commune", 1);
 		expected.put("in", 2);
-		expected.put("of", 2);
-		expected.put("france", 3);
+		expected.put("france", 1);
 		expected.put("the", 1);
 		expected.put("pyrénées", 1);
 		expected.put("atlantique", 1);
-		expected.put("department", 2);
+		expected.put("department", 1);
 		expected.put("south", 1);
 		expected.put("western", 1);
 		HashMap<String, Integer> actual = clusteringMap.createHistogram(test);
@@ -54,10 +53,39 @@ public class ClusteringMapTest {
 		String expected = " abc  def";
 		String actual = clusteringMap.removeSubject(test);
 		assertThat(actual).isEqualTo(expected);
-		String testSentence = "'' ''' black dog ''' '' be a song by english rock band [[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
-		String expectedSentence = " be a song by english rock band [[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
+		String testSentence = "'' ''' black dog ''' '' be a song by english rock band "
+				+ "[[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
+		String expectedSentence = " be a song by english rock band [[ lead zeppelin ]] , "
+				+ "the open track on they [[ lead zeppelin iv | fourth album ]] .";
 		String actualSentence = clusteringMap.removeSubject(testSentence);
 		assertThat(actualSentence).isEqualTo(expectedSentence);
+	}
+
+	@Test
+	public void testGetObjectCleanSentence() {
+		String test = "be a [[ commune of France | commune ]] in "
+				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
+		String actual = clusteringMap.getObjectCleanSentence(test);
+		String expected = "be a  commune  in "
+				+ "the  pyrénées-atlantique   department  "
+				+ "in south-western  France  .";
+		assertThat(actual).isEqualTo(expected);
+
+		String testSentence = "the  be a process of [[ debt restructuring ]] by  "
+				+ "that begin on january 14 , 2005 , and allow it to resume payment "
+				+ "on 76 % of the [[ unite state dollar | we $ ]] 82 billion in "
+				+ "[[ sovereign bond ]] s that default in 2001 at the depth of "
+				+ "[[ argentine economic crisis | the worst economic crisis ]] in the nation ' s history .";
+
+		String actualSentence = clusteringMap
+				.getObjectCleanSentence(testSentence);
+		String expectedSentece = "the  be a process of  debt restructuring  by  "
+				+ "that begin on january 14 , 2005 , and allow it to resume payment "
+				+ "on 76 % of the  we dollar  82 billion in "
+				+ " sovereign bond  s that default in 2001 at the depth of "
+				+ " the worst economic crisis  in the nation ' s history .";
+		assertThat(actualSentence).isEqualTo(expectedSentece);
 	}
 
 	@Test
@@ -91,21 +119,4 @@ public class ClusteringMapTest {
 
 	}
 
-	// @Test
-	// public void testGetEntityParentMap() {
-	// String test =
-	// "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
-	// +
-	// "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
-	// + "in south-western [[ France ]] .";
-	// List<WikiObject> wikiObjectList = clusteringMap.getObjectList(test);
-	// // subject id for ''' Saint-Esteben '''
-	// clusteringMap.subject = App.esService.getEntity("Q768391");
-	// clusteringMap.entityMap =
-	// clusteringMap.collectEntities(clusteringMap.subject.getClaims());
-	// HashMap<String, Entity> entityParentMap = clusteringMap
-	// .getEntityParentMap(wikiObjectList);
-	// assertThat(entityParentMap).extracting("");
-	//
-	// }
 }

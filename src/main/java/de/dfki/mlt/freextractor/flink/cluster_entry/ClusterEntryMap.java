@@ -52,7 +52,7 @@ public class ClusterEntryMap
 		List<SentenceObject> objectList = getObjectList(value.f3);
 		subject = App.esService.getEntity(value.f1);
 		if (subject != null) {
-			String tokSentence = removeSubject(value.f4);
+			String tokenizedSentence = removeSubject(value.f4);
 			entityMap = collectEntities(subject.getClaims());
 			entityParentMap = getEntityParentMap(objectList);
 			Entity subjectParent = entityParentMap.get(subject.getId());
@@ -65,11 +65,11 @@ public class ClusterEntryMap
 						ClusterId clusterId = getClusterKey(subjectType,
 								object, property, objectList);
 						if (clusterId != null) {
-							HashMap<String, Integer> hist = createHistogram(removeObjectByIndex(
-									tokSentence, objectIndexInSentence));
+							HashMap<String, Integer> histogram = createHistogram(removeObjectByIndex(
+									tokenizedSentence, objectIndexInSentence));
 							ClusterEntry entry = new ClusterEntry(clusterId,
 									value.f4, value.f0, subjectPosition,
-									objectPosition, hist);
+									objectPosition, histogram);
 							out.collect(entry);
 						} else {
 							// App.LOG.info("No cluster entry for subject id: "
@@ -83,8 +83,9 @@ public class ClusterEntryMap
 	}
 
 	public HashMap<String, Integer> createHistogram(String text) {
+		text = getObjectCleanSentence(text);
 		HashMap<String, Integer> histogram = new HashMap<String, Integer>();
-		String punctutations = "`.,:;&*!?[['''''']]|";
+		String punctutations = "`.,:;&*!?[['''''']]|=+-/";
 		for (String token : text.split(" ")) {
 			if (!punctutations.contains(token) && !containsOnlyDigits(token)) {
 				int count = 0;
@@ -113,6 +114,31 @@ public class ClusterEntryMap
 			if (count == index)
 				matcher.appendReplacement(buffer, "");
 			count++;
+		}
+		matcher.appendTail(buffer);
+		return buffer.toString();
+	}
+
+	public String getObjectCleanSentence(String text) {
+		text = text.replaceAll("\\$", "dollar");
+		Pattern pattern = Pattern.compile("\\[\\[.*?\\]\\]");
+		Matcher matcher = pattern.matcher(text);
+		StringBuffer buffer = new StringBuffer();
+		while (matcher.find()) {
+			String object = text.substring(matcher.start(), matcher.end());
+			if (object.contains("|")) {
+				String[] objectArr = object.split("\\|");
+				if (objectArr.length >= 1) {
+					object = objectArr[1];
+				}
+			}
+			object = object.replaceAll("\\[\\[", "").replaceAll("\\]\\]", "");
+			try {
+				matcher.appendReplacement(buffer, object);
+			} catch (IllegalArgumentException e) {
+				System.err.println(text);
+				App.LOG.info(e + " the sentence: " + text);
+			}
 		}
 		matcher.appendTail(buffer);
 		return buffer.toString();
@@ -183,7 +209,6 @@ public class ClusterEntryMap
 				Entity objectParent = entityParentMap.get(object.getId());
 				String objectType = getEntityType(objectParent, object);
 				if (objectType != null) {
-					objectType = Helper.fromLabelToKey(objectType);
 					String relationLabel = Helper.fromLabelToKey(property
 							.getLabel());
 					objectPosition = sentenceObject.getPosition();
@@ -197,7 +222,7 @@ public class ClusterEntryMap
 
 	private String getEntityType(Entity parentEntity, Entity entity) {
 		if (parentEntity != null) {
-			return parentEntity.getLabel();
+			return Helper.fromLabelToKey(parentEntity.getLabel());
 		} else {
 			// App.LOG.info("No parent for object: " + entity.getId());
 			return null;
