@@ -31,10 +31,14 @@ public class ClusterEntrySink implements
 	public IndexRequest createIndexRequest(ClusterEntry clusterEntry)
 			throws IOException {
 
-		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
-				.field("subj-type", clusterEntry.getClusterId().getSubjType())
-				.field("obj-type", clusterEntry.getClusterId().getObjType())
-				.field("relation", clusterEntry.getClusterId().getRelLabel())
+		XContentBuilder builder = XContentFactory
+				.jsonBuilder()
+				.startObject()
+				.field("subj-type",
+						clusterEntry.getClusterId().getSubjectType())
+				.field("obj-type", clusterEntry.getClusterId().getObjectType())
+				.field("relation",
+						clusterEntry.getClusterId().getRelationLabel())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
 				.field("tok-sent", clusterEntry.getTokenizedSentence())
 				.field("page-id", clusterEntry.getPageId())
