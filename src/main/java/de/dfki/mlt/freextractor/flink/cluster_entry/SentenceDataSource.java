@@ -5,8 +5,8 @@ package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -26,35 +26,39 @@ public class SentenceDataSource implements
 	private static final long serialVersionUID = 1L;
 	boolean isRunning = true;
 
-	@SuppressWarnings("deprecation")
 	@Override
-	public void run(SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
+	public void run(
+			SourceContext<Tuple5<Integer, String, String, String, String>> ctx)
 			throws Exception {
-		int scrollSize = 1000;
-		SearchResponse response = App.esService
+		SearchRequestBuilder request = App.esService
 				.getClient()
 				.prepareSearch(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE_INDEX))
-				.setSearchType(SearchType.SCAN)
 				.setScroll(new TimeValue(60000))
 				.setTypes(
 						Config.getInstance().getString(
 								Config.WIKIPEDIA_SENTENCE))
-				.addFields("page-id", "title", "subject-id", "sentence", "tok-sentence")
-				.setQuery(QueryBuilders.matchAllQuery()).setSize(scrollSize)
-				.execute().actionGet();
+				.setQuery(QueryBuilders.matchAllQuery())
+				.setSize(Config.getInstance().getInt(Config.SCROLL_SIZE));
+		SearchResponse response = request.execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				Integer pageId = Integer.parseInt(hit.field("page-id")
-						.getValue().toString());
-				String subjectId = hit.field("subject-id").getValue()
+
+				Integer pageId = Integer.parseInt(hit.getSource()
+						.get("page-id").toString());
+				String subjectId = hit.getSource().get("subject-id").toString();
+				String title = hit.getSource().get("title").toString();
+				String sentence = hit.getSource().get("sentence").toString();
+				String tokenizedSentence = hit.getSource().get("tok-sentence")
 						.toString();
-				String title = hit.field("title").getValue().toString();
-				String sentence = hit.field("sentence").getValue().toString();
-				String tokenizedSentence = hit.field("tok-sentence").getValue().toString();
-				ctx.collect(new Tuple5<Integer, String, String, String,String>(pageId,
-						subjectId, title, sentence,tokenizedSentence));
+				// TODO: garbage sentences have to be removed in sentence
+				// extraction app !!!
+				if (sentence.length() > 0 && !sentence.contains("may refer to")) {
+					ctx.collect(new Tuple5<Integer, String, String, String, String>(
+							pageId, subjectId, title, sentence,
+							tokenizedSentence));
+				}
 			}
 			response = App.esService.getClient()
 					.prepareSearchScroll(response.getScrollId())

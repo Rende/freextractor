@@ -6,9 +6,6 @@ package de.dfki.mlt.freextractor.flink.term;
 import java.util.Collection;
 
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 
@@ -31,28 +28,12 @@ public class ClusterIdDataSource implements SourceFunction<String> {
 	public void run(SourceContext<String> ctx) throws Exception {
 
 		while (isRunning) {
-			SearchResponse response = App.esService
-					.getClient()
-					.prepareSearch(
-							Config.getInstance().getString(
-									Config.CLUSTER_ENTRY_INDEX))
-					.setTypes(
-							Config.getInstance()
-									.getString(Config.CLUSTER_ENTRY))
-					.setQuery(QueryBuilders.matchAllQuery())
-					.addAggregation(
-							AggregationBuilders.terms("clusters")
-									.field("cluster-id").size(0))
-					.setFetchSource(true).setExplain(false).execute()
-					.actionGet();
-
-			Terms terms = response.getAggregations().get("clusters");
-			Collection<Terms.Bucket> buckets = terms.getBuckets();
+			Collection<Terms.Bucket> buckets = App.esService.getClusters();
 			for (Bucket bucket : buckets) {
-				// if (bucket.getDocCount() > 1)
-				ctx.collect(bucket.getKeyAsString());
-				// System.out.println(bucket.getKeyAsString() + " ("
-				// + bucket.getDocCount() + ")");
+				if (bucket.getDocCount() >= Config.getInstance().getInt(
+						Config.MIN_CLUSTER_SIZE)) {
+					ctx.collect(bucket.getKeyAsString());
+				}
 			}
 			System.out.println("Over");
 			break;

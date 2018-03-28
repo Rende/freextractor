@@ -1,15 +1,14 @@
 package de.dfki.mlt.freextractor;
 
-import java.io.IOException;
-
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.elasticsearch2.ElasticsearchSink;
+import org.apache.flink.streaming.connectors.elasticsearch5.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntry;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
 import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
@@ -31,9 +30,9 @@ public class App {
 
 	public static void main(String[] args) throws Exception {
 
-		sentenceProcessingApp();
-//		termCountingApp();
-//		docCountingApp();
+		// sentenceProcessingApp();
+		// termCountingApp();
+		docCountingApp();
 
 	}
 
@@ -48,13 +47,16 @@ public class App {
 	public static boolean sentenceProcessingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
+		esService.checkAndCreateIndex(Config.getInstance().getString(
+				Config.CLUSTER_ENTRY_INDEX));
+		esService.putMappingForClusterEntry();
 		DataStream<Tuple5<Integer, String, String, String, String>> stream = env
 				.addSource(new SentenceDataSource());
 		stream.flatMap(new ClusterEntryMap()).addSink(
-				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(),
-						new ClusterEntrySink()));
+				new ElasticsearchSink<ClusterEntry>(ElasticsearchService
+						.getUserConfig(), ElasticsearchService
+						.getTransportAddresses(), new ClusterEntrySink()));
 		JobExecutionResult result = env.execute("SentenceProcessingApp");
 		return result.isJobExecutionResult();
 	}
@@ -68,15 +70,11 @@ public class App {
 	public static boolean termCountingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
 		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
-		try {
-			esService.checkAndCreateIndex(Config.getInstance().getString(
-					Config.TERM_INDEX));
-			esService.putMappingForTerms();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		esService.checkAndCreateIndex(Config.getInstance().getString(
+				Config.TERM_INDEX));
+		esService.putMappingForTerms();
 		stream.flatMap(new TermCountingMap()).addSink(
 				new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
 						ElasticsearchService.getTransportAddresses(),
@@ -93,7 +91,7 @@ public class App {
 	public static boolean docCountingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment
 				.getExecutionEnvironment();
-		env.setParallelism(20);
+		env.setParallelism(14);
 		env.addSource(new TermDataSource())
 				.flatMap(new DocCountingMap())
 				.addSink(

@@ -39,15 +39,16 @@ public class TermDataSource implements SourceFunction<Tuple2<Double, String>> {
 					.setQuery(QueryBuilders.matchAllQuery())
 					.addAggregation(
 							AggregationBuilders.terms("ts").field("term")
-									.size(5000000)).setFetchSource(true)
-					.setExplain(false).execute().actionGet();
+									.size(Integer.MAX_VALUE))
+					.setFetchSource(true).setExplain(false).execute()
+					.actionGet();
 
-			Long total = (long) 5000000;
+			Long total = App.esService.getClusterNumber();
 			Terms terms = response.getAggregations().get("ts");
 			Collection<Terms.Bucket> buckets = terms.getBuckets();
 			for (Bucket bucket : buckets) {
 				Long df = bucket.getDocCount();
-				Double idf = Math.log(total / df);
+				Double idf = Math.log10(total / df);
 				ctx.collect(new Tuple2<Double, String>(idf, bucket
 						.getKeyAsString()));
 			}
