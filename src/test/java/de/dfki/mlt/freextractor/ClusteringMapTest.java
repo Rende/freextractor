@@ -10,8 +10,10 @@ import java.util.List;
 
 import org.junit.Test;
 
+import de.dfki.mlt.freextractor.flink.Helper;
+import de.dfki.mlt.freextractor.flink.SentenceItem;
+import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
-import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceObject;
 
 /**
  * @author Aydan Rende, DFKI
@@ -19,6 +21,7 @@ import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceObject;
  */
 public class ClusteringMapTest {
 	private ClusterEntryMap clusteringMap = new ClusterEntryMap();
+	private Helper helper = new Helper();
 
 	public ClusteringMapTest() {
 		clusteringMap.open(null);
@@ -67,8 +70,7 @@ public class ClusteringMapTest {
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 		String actual = clusteringMap.getObjectCleanSentence(test);
-		String expected = "be a  commune  in "
-				+ "the  pyrénées-atlantique   department  "
+		String expected = "be a  commune  in " + "the  pyrénées-atlantique   department  "
 				+ "in south-western  France  .";
 		assertThat(actual).isEqualTo(expected);
 
@@ -78,8 +80,7 @@ public class ClusteringMapTest {
 				+ "[[ sovereign bond ]] s that default in 2001 at the depth of "
 				+ "[[ argentine economic crisis | the worst economic crisis ]] in the nation ' s history .";
 
-		String actualSentence = clusteringMap
-				.getObjectCleanSentence(testSentence);
+		String actualSentence = clusteringMap.getObjectCleanSentence(testSentence);
 		String expectedSentece = "the  be a process of  debt restructuring  by  "
 				+ "that begin on january 14 , 2005 , and allow it to resume payment "
 				+ "on 76 % of the  we dollar  82 billion in "
@@ -93,28 +94,40 @@ public class ClusteringMapTest {
 		String test = "be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
-		String expected = "be a  in "
-				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+		String expected = "be a  in " + "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 		String actual = clusteringMap.removeObjectByIndex(test, 0);
 		assertThat(actual).isEqualTo(expected);
 		String expected2 = "be a [[ commune of France | commune ]] in "
-				+ "the  [[ Departments of France | department ]] "
-				+ "in south-western [[ France ]] .";
+				+ "the  [[ Departments of France | department ]] " + "in south-western [[ France ]] .";
 		String actual2 = clusteringMap.removeObjectByIndex(test, 1);
 		assertThat(actual2).isEqualTo(expected2);
 	}
 
 	@Test
-	public void testGetObjectMap() {
+	public void testGetSentenceItemList() {
+		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
+				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
+		List<SentenceItem> actualList = helper.getSentenceItemList(test);
+		assertThat(actualList).extracting("position").containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+		assertThat(actualList).extracting("surface").containsExactly("''' Saint-Esteben '''", "be", "a",
+				"[[ commune of France | commune ]]", "in", "the", "[[ pyrénées-atlantique ]]",
+				"[[ Departments of France | department ]]", "in", "south-western", "[[ France ]]", ".");
+		assertThat(actualList).extracting("type").containsExactly(Type.SUBJECT, Type.OTHER, Type.OTHER, Type.OBJECT,
+				Type.OTHER, Type.OTHER, Type.OBJECT, Type.OBJECT, Type.OTHER, Type.OTHER, Type.OBJECT, Type.OTHER);
+	}
+
+	@Test
+	public void testGetObjectList() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 
-		List<SentenceObject> actual = clusteringMap.getObjectList(test);
+		List<SentenceItem> sentenceItemList = helper.getSentenceItemList(test);
+		List<SentenceItem> actual = clusteringMap.getObjectList(sentenceItemList);
 		assertThat(actual).extracting("position").containsExactly(3, 6, 7, 10);
-		assertThat(actual).extracting("label").containsExactly(
-				"Commune_of_France", "Pyrénées-atlantique",
+		assertThat(actual).extracting("surface").containsExactly("Commune_of_France", "Pyrénées-atlantique",
 				"Departments_of_France", "France");
 
 	}

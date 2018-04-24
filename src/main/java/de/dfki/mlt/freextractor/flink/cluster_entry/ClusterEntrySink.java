@@ -21,50 +21,38 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntrySink implements
-		ElasticsearchSinkFunction<ClusterEntry> {
+public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry> {
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public IndexRequest createIndexRequest(ClusterEntry clusterEntry)
-			throws IOException {
+	public IndexRequest createIndexRequest(ClusterEntry clusterEntry) throws IOException {
 
-		XContentBuilder builder = XContentFactory
-				.jsonBuilder()
-				.startObject()
-				.field("subj-type",
-						clusterEntry.getClusterId().getSubjectType())
+		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
+				.field("subj-type", clusterEntry.getClusterId().getSubjectType())
 				.field("obj-type", clusterEntry.getClusterId().getObjectType())
-				.field("relation",
-						clusterEntry.getClusterId().getRelationLabel())
+				.field("relation", clusterEntry.getClusterId().getRelationLabel())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
-				.field("tok-sent", clusterEntry.getTokenizedSentence())
-				.field("page-id", clusterEntry.getPageId())
-				.field("subj-pos", clusterEntry.getSubjPos())
-				.field("obj-pos", clusterEntry.getObjPos()).startArray("words");
+				.field("subj-name", clusterEntry.getSubjectName()).field("obj-name", clusterEntry.getObjectName())
+				.field("tok-sent", clusterEntry.getTokenizedSentence()).field("page-id", clusterEntry.getPageId())
+				.field("subj-pos", clusterEntry.getSubjectPosition()).field("obj-pos", clusterEntry.getObjectPosition())
+				.startArray("words");
 
-		for (Map.Entry<String, Integer> entry : clusterEntry.getHist()
-				.entrySet()) {
-			builder.startObject().field("word", entry.getKey())
-					.field("count", entry.getValue()).endObject();
+		for (Map.Entry<String, Integer> entry : clusterEntry.getHistogram().entrySet()) {
+			builder.startObject().field("word", entry.getKey()).field("count", entry.getValue()).endObject();
 		}
 		builder.endArray().endObject();
 		String json = builder.string();
-		IndexRequest indexRequest = Requests
-				.indexRequest()
-				.index(Config.getInstance().getString(
-						Config.CLUSTER_ENTRY_INDEX))
-				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY))
-				.source(json);
+		IndexRequest indexRequest = Requests.indexRequest()
+				.index(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
+				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).source(json);
 
 		return indexRequest;
 	}
 
 	@Override
-	public void process(ClusterEntry entry, RuntimeContext ctx,
-			RequestIndexer indexer) {
+	public void process(ClusterEntry entry, RuntimeContext ctx, RequestIndexer indexer) {
 		try {
 			indexer.add(createIndexRequest(entry));
 		} catch (IOException e) {

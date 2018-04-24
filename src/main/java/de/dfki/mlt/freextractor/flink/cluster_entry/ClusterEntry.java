@@ -13,108 +13,87 @@ public class ClusterEntry {
 
 	private ClusterId clusterId;
 	private String tokenizedSentence;
+	private String subjectName;
+	private String objectName;
 	private Integer pageId;
-	private Integer subjPos;
-	private Integer objPos;
-	private HashMap<String, Integer> hist;
+	private Integer subjectPosition;
+	private Integer objectPosition;
+	private HashMap<String, Integer> histogram;
 
-	public ClusterEntry(ClusterId id, String tokenizedSentence, Integer pageId,
-			Integer subjPos, Integer objPos, HashMap<String, Integer> hist) {
+	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, Integer pageId,
+			Integer subjectPosition, Integer objectPosition, HashMap<String, Integer> histogram) {
 
 		this.clusterId = id;
 		this.tokenizedSentence = tokenizedSentence;
+		this.subjectName = subjectName;
+		this.objectName = objectName;
 		this.pageId = pageId;
-		this.subjPos = subjPos;
-		this.objPos = objPos;
-		this.hist = hist;
+		this.subjectPosition = subjectPosition;
+		this.objectPosition = objectPosition;
+		this.histogram = histogram;
 	}
 
-	/**
-	 * @return the tokenizedSentence
-	 */
 	public String getTokenizedSentence() {
 		return tokenizedSentence;
 	}
 
-	/**
-	 * @return the pageId
-	 */
 	public Integer getPageId() {
 		return pageId;
 	}
 
-
-	/**
-	 * @param tokenizedSentence
-	 *            the tokenizedSentence to set
-	 */
 	public void setTokenizedSentence(String tokenizedSentence) {
 		this.tokenizedSentence = tokenizedSentence;
 	}
 
-	/**
-	 * @param pageId
-	 *            the pageId to set
-	 */
 	public void setPageId(Integer pageId) {
 		this.pageId = pageId;
 	}
 
-	/**
-	 * @return the clusterId
-	 */
 	public ClusterId getClusterId() {
 		return clusterId;
 	}
 
-	/**
-	 * @param clusterId
-	 *            the clusterId to set
-	 */
 	public void setClusterId(ClusterId clusterId) {
 		this.clusterId = clusterId;
 	}
 
-	/**
-	 * @return the subjPos
-	 */
-	public Integer getSubjPos() {
-		return subjPos;
+	public Integer getSubjectPosition() {
+		return subjectPosition;
 	}
 
-	/**
-	 * @return the objPos
-	 */
-	public Integer getObjPos() {
-		return objPos;
+	public Integer getObjectPosition() {
+		return objectPosition;
 	}
 
-	/**
-	 * @param subjPos the subjPos to set
-	 */
-	public void setSubjPos(Integer subjPos) {
-		this.subjPos = subjPos;
+	public void setSubjectPosition(Integer subjPos) {
+		this.subjectPosition = subjPos;
 	}
 
-	/**
-	 * @param objPos the objPos to set
-	 */
-	public void setObjPos(Integer objPos) {
-		this.objPos = objPos;
+	public void setObjectPosition(Integer objPos) {
+		this.objectPosition = objPos;
 	}
 
-	/**
-	 * @return the hist
-	 */
-	public HashMap<String, Integer> getHist() {
-		return hist;
+	public HashMap<String, Integer> getHistogram() {
+		return histogram;
 	}
 
-	/**
-	 * @param hist the hist to set
-	 */
-	public void setHist(HashMap<String, Integer> hist) {
-		this.hist = hist;
+	public void setHistogram(HashMap<String, Integer> hist) {
+		this.histogram = hist;
 	}
 
+	public String getSubjectName() {
+		return subjectName;
+	}
+
+	public void setSubjectName(String subjectName) {
+		this.subjectName = subjectName;
+	}
+
+	public String getObjectName() {
+		return objectName;
+	}
+
+	public void setObjectName(String objectName) {
+		this.objectName = objectName;
+	}
 }

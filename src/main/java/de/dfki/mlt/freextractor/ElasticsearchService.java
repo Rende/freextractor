@@ -54,6 +54,7 @@ public class ElasticsearchService {
 		getClient();
 	}
 
+	@SuppressWarnings("resource")
 	public Client getClient() {
 		if (client == null) {
 			Settings settings = Settings
@@ -179,17 +180,18 @@ public class ElasticsearchService {
 				.startObject()
 				.startObject(
 						Config.getInstance().getString(Config.CLUSTER_ENTRY))
-				.startObject("properties").startObject("subj-type")
-				.field("type", "keyword").field("index", "true").endObject()
-				.startObject("obj-type").field("type", "keyword")
-				.field("index", "true").endObject().startObject("relation")
-				.field("type", "keyword").field("index", "true").endObject()
-				.startObject("cluster-id").field("type", "keyword")
-				.field("index", "true").endObject().startObject("tok-sent")
-				.field("type", "text").endObject().startObject("page-id")
-				.field("type", "integer").endObject().startObject("subj-pos")
-				.field("type", "integer").endObject().startObject("obj-pos")
-				.field("type", "integer").endObject().startObject("words")
+				.startObject("properties")
+				.startObject("subj-type").field("type", "keyword").field("index", "true").endObject()
+				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
+				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
+				.startObject("cluster-id").field("type", "keyword").field("index", "true").endObject()
+				.startObject("subj-name").field("type", "keyword").field("index", "true").endObject()
+				.startObject("obj-name").field("type", "keyword").field("index", "true").endObject()
+				.startObject("tok-sent").field("type", "text").endObject()
+				.startObject("page-id").field("type", "integer").endObject()
+				.startObject("subj-pos").field("type", "integer").endObject()
+				.startObject("obj-pos").field("type", "integer").endObject()
+				.startObject("words")
 				.startObject("properties").startObject("word")
 				.field("type", "keyword").endObject().startObject("count")
 				.field("type", "integer").endObject().endObject().endObject()
