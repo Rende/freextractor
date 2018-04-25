@@ -70,8 +70,7 @@ public class ClusteringMapTest {
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 		String actual = clusteringMap.getObjectCleanSentence(test);
-		String expected = "be a  commune  in " + "the  pyrénées-atlantique   department  "
-				+ "in south-western  France  .";
+		String expected = "be a commune in the pyrénées-atlantique department in south-western France .";
 		assertThat(actual).isEqualTo(expected);
 
 		String testSentence = "the  be a process of [[ debt restructuring ]] by  "
@@ -81,11 +80,11 @@ public class ClusteringMapTest {
 				+ "[[ argentine economic crisis | the worst economic crisis ]] in the nation ' s history .";
 
 		String actualSentence = clusteringMap.getObjectCleanSentence(testSentence);
-		String expectedSentece = "the  be a process of  debt restructuring  by  "
+		String expectedSentece = "the  be a process of debt restructuring by  "
 				+ "that begin on january 14 , 2005 , and allow it to resume payment "
-				+ "on 76 % of the  we dollar  82 billion in "
-				+ " sovereign bond  s that default in 2001 at the depth of "
-				+ " the worst economic crisis  in the nation ' s history .";
+				+ "on 76 % of the we dollar 82 billion in "
+				+ "sovereign bond s that default in 2001 at the depth of "
+				+ "the worst economic crisis in the nation ' s history .";
 		assertThat(actualSentence).isEqualTo(expectedSentece);
 	}
 
