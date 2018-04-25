@@ -33,6 +33,7 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 				.field("subj-type", clusterEntry.getClusterId().getSubjectType())
 				.field("obj-type", clusterEntry.getClusterId().getObjectType())
 				.field("relation", clusterEntry.getClusterId().getRelationLabel())
+				.field("relation-id", clusterEntry.getClusterId().getRelationId())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
 				.field("subj-name", clusterEntry.getSubjectName()).field("obj-name", clusterEntry.getObjectName())
 				.field("tok-sent", clusterEntry.getTokenizedSentence()).field("page-id", clusterEntry.getPageId())
