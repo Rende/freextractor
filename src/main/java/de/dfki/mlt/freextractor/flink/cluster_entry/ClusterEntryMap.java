@@ -119,14 +119,7 @@ public class ClusterEntryMap
 		Matcher matcher = pattern.matcher(text);
 		StringBuffer buffer = new StringBuffer();
 		while (matcher.find()) {
-			String object = text.substring(matcher.start(), matcher.end());
-			if (object.contains("|")) {
-				String[] objectArr = object.split("\\|");
-				if (objectArr.length >= 1) {
-					object = objectArr[1];
-				}
-			}
-			object = object.replaceAll("\\[\\[", "").replaceAll("\\]\\]", "");
+			String object = App.helper.getCleanObjectLabel(text.substring(matcher.start(), matcher.end()), false);
 			try {
 				matcher.appendReplacement(buffer, object);
 			} catch (IllegalArgumentException e) {
@@ -200,7 +193,7 @@ public class ClusterEntryMap
 					String relationLabel = Helper.fromLabelToKey(property.getLabel());
 					objectPosition = sentenceObject.getPosition();
 					objectIndexInSentence = i;
-					return new ClusterId(subjectType, objectType, relationLabel);
+					return new ClusterId(subjectType, objectType, relationLabel, property.getId());
 				}
 			}
 		}
@@ -244,7 +237,7 @@ public class ClusterEntryMap
 		List<SentenceItem> objectList = new ArrayList<SentenceItem>();
 		for (SentenceItem item : sentenceItemList) {
 			if (item.getType().equals(Type.OBJECT)) {
-				item.setSurface(App.helper.getLabel(item.getSurface()));
+				item.setSurface(App.helper.getCleanObjectLabel(item.getSurface(), true));
 				objectList.add(item);
 			} else if (item.getType().equals(Type.SUBJECT)) {
 				subjectPosition = item.getPosition();

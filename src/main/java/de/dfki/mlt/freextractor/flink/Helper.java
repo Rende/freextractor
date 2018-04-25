@@ -104,18 +104,33 @@ public class Helper {
 		return builder;
 	}
 
-	public String getLabel(String text) {
-		String label = text.replaceAll("\\[\\[", "").replaceAll("\\]\\]", "").trim();
-		if (label.contains("|")) {
-			String[] labelArr = label.split("\\|");
-			try {
-				label = labelArr[0];
-			} catch (ArrayIndexOutOfBoundsException e) {
-				label = text.replaceAll("\\[\\[", "").trim().replace("\\|", "");
+	public String getCleanObjectLabel(String objectSurface, boolean isOriginalLabel) {
+		objectSurface = cleanObjectLabel(objectSurface);
+		String label = new String();
+		if (objectSurface.contains("|")) {
+			String[] objectSurfaceArray = objectSurface.split("\\|");
+			if (isOriginalLabel) {
+				try {
+					label = objectSurfaceArray[0];
+				} catch (ArrayIndexOutOfBoundsException e) {
+					label = objectSurface.replaceAll("\\[\\[", "").trim().replace("\\|", "");
+				}
+				label = Helper.fromStringToWikilabel(label);
+			} else {
+				if (objectSurfaceArray.length >= 1) {
+					label = objectSurfaceArray[1];
+				} else {
+					label = objectSurface.replace("\\|", "");
+				}
 			}
 		}
-		label = Helper.fromStringToWikilabel(label);
 		return label;
+
+	}
+
+	public String cleanObjectLabel(String objectLabel) {
+		objectLabel = objectLabel.replaceAll("\\[\\[", "").replaceAll("\\]\\]", "").trim();
+		return objectLabel;
 	}
 
 }

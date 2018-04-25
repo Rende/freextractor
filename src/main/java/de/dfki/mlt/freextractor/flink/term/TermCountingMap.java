@@ -16,6 +16,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.preferences.Config;
@@ -24,8 +25,7 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class TermCountingMap implements
-		FlatMapFunction<String, Tuple4<String, Double, Double, String>> {
+public class TermCountingMap implements FlatMapFunction<String, Tuple4<String, Double, Double, String>> {
 	/**
 	 *
 	 */
@@ -33,26 +33,12 @@ public class TermCountingMap implements
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void flatMap(String clusterId,
-			Collector<Tuple4<String, Double, Double, String>> out)
-			throws Exception {
+	public void flatMap(String clusterId, Collector<Tuple4<String, Double, Double, String>> out) throws Exception {
 		HashMap<String, Double> dict = new HashMap<String, Double>();
-		SearchRequestBuilder builder = App.esService
-				.getClient()
-				.prepareSearch(
-						Config.getInstance().getString(
-								Config.CLUSTER_ENTRY_INDEX))
-				.setScroll(new TimeValue(60000))
-				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
-				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
-		System.out.println(builder.toString());
-		SearchResponse response = builder
-				.setSize(Config.getInstance().getInt(Config.SCROLL_SIZE))
-				.execute().actionGet();
+		SearchResponse response = App.esService.getClusterEntryHits(clusterId);
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit
-						.getSource().get("words");
+				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit.getSource().get("words");
 				for (Map<Object, Object> entry : wordMap) {
 					String word = (String) entry.get("word");
 					Integer count = (Integer) entry.get("count");
@@ -62,10 +48,8 @@ public class TermCountingMap implements
 					}
 					dict.put(String.valueOf(word), dblCount);
 				}
-
 			}
-			response = App.esService.getClient()
-					.prepareSearchScroll(response.getScrollId())
+			response = App.esService.getClient().prepareSearchScroll(response.getScrollId())
 					.setScroll(new TimeValue(60000)).execute().actionGet();
 		} while (response.getHits().getHits().length != 0);
 
@@ -75,8 +59,7 @@ public class TermCountingMap implements
 		}
 		for (Entry<String, Double> entry : dict.entrySet()) {
 			double tf = entry.getValue() / total;
-			out.collect(new Tuple4<String, Double, Double, String>(entry
-					.getKey(), tf, 0.0, clusterId));
+			out.collect(new Tuple4<String, Double, Double, String>(entry.getKey(), tf, 0.0, clusterId));
 		}
 
 	}
