@@ -52,12 +52,11 @@ public class Helper {
 	}
 
 	/**
-	 * returns the list of objects, sets the subject position in the sentence.
-	 * subject: ''' abc ''' = single token. object: [[ abc ]] = single token. the
-	 * positions are counted based on this schema.
+	 * Returns the list of objects. Subject: ''' abc ''' = single token. object: [[
+	 * abc ]] = single token. The positions are counted based on this schema.
 	 **/
-	public List<SentenceItem> getSentenceItemList(String text) {
-		List<SentenceItem> sentenceItemList = new ArrayList<SentenceItem>();
+	public List<Word> getWordList(String text) {
+		List<Word> words = new ArrayList<Word>();
 		AnnotatedString annotatedString = jtok.tokenize(text, "en");
 		List<Token> tokens = Outputter.createTokens(annotatedString);
 
@@ -72,7 +71,7 @@ public class Helper {
 			} else if (token.getImage().contains("'''") && isSubject) {
 				isSubject = false;
 				builder = append(builder, token);
-				sentenceItemList.add(new SentenceItem(index, builder.toString().trim(), Type.SUBJECT));
+				words.add(new Word(index, builder.toString().trim(), Type.SUBJECT));
 				index++;
 			} else if (isSubject) {
 				builder = append(builder, token);
@@ -81,17 +80,17 @@ public class Helper {
 				inBracket = true;
 			} else if (token.getType().equals("CCROCHE") && inBracket) {
 				builder = append(builder, token);
-				sentenceItemList.add(new SentenceItem(index, builder.toString().trim(), Type.OBJECT));
+				words.add(new Word(index, builder.toString().trim(), Type.OBJECT));
 				inBracket = false;
 				index++;
 			} else if (inBracket) {
 				builder = append(builder, token);
 			} else {
-				sentenceItemList.add(new SentenceItem(index, token.getImage(), Type.OTHER));
+				words.add(new Word(index, token.getImage(), Type.OTHER));
 				index++;
 			}
 		}
-		return sentenceItemList;
+		return words;
 	}
 
 	public StringBuilder build(Token token) {

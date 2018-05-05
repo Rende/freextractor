@@ -11,15 +11,11 @@ import java.util.Map.Entry;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.util.Collector;
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 
 import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

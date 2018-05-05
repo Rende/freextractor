@@ -35,7 +35,6 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
@@ -151,14 +150,16 @@ public class ElasticsearchService {
 				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
 				.startObject("relation-id").field("type", "keyword").endObject()
 				.startObject("cluster-id").field("type", "keyword").field("index", "true").endObject()
-				.startObject("subj-name").field("type", "keyword").field("index", "true").endObject()
-				.startObject("obj-name").field("type", "keyword").field("index", "true").endObject()
-				.startObject("tok-sent").field("type", "text").endObject().startObject("page-id")
-				.field("type", "integer").endObject().startObject("subj-pos").field("type", "integer").endObject()
-				.startObject("obj-pos").field("type", "integer").endObject().startObject("words")
-				.startObject("properties").startObject("word").field("type", "keyword").endObject().startObject("count")
-				.field("type", "integer").endObject().endObject().endObject()
-				.endObject() // properties
+				.startObject("subj-name").field("type", "keyword").endObject()
+				.startObject("obj-name").field("type", "keyword").endObject()
+				.startObject("relation-phrase").field("type", "keyword").endObject()
+				.startObject("tok-sent").field("type", "text").endObject()
+				.startObject("page-id").field("type", "integer").endObject()
+				.startObject("subj-pos").field("type", "integer").endObject()
+				.startObject("obj-pos").field("type", "integer").endObject()
+				.startObject("words").startObject("properties").startObject("word")
+				.field("type", "keyword").endObject().startObject("count").field("type", "integer").endObject()
+				.endObject().endObject().endObject() // properties
 				.endObject() // documentType
 				.endObject();
 
@@ -190,14 +191,11 @@ public class ElasticsearchService {
 
 	public Entity getEntity(String entityId) {
 		QueryBuilder query = QueryBuilders.termQuery("_id", entityId);
-		// System.out.println("getEntity query: " + query);
 		try {
 			SearchRequestBuilder requestBuilder = getClient()
 					.prepareSearch(Config.getInstance().getString(Config.WIKIDATA_INDEX))
 					.setTypes(Config.getInstance().getString(Config.WIKIDATA_ENTITY)).setQuery(query).setSize(1);
-			// System.out.println(requestBuilder);
 			SearchResponse response = requestBuilder.execute().actionGet();
-			// System.out.println("getEntity response: " + response);
 
 			if (isResponseValid(response)) {
 				for (SearchHit hit : response.getHits()) {
@@ -212,7 +210,7 @@ public class ElasticsearchService {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Entity createEntity(SearchHit hit) {
+	private Entity createEntity(SearchHit hit) {
 		String id = hit.getId();
 		String type = hit.getSource().get("type").toString();
 		String label = hit.getSource().get("label").toString();
@@ -224,7 +222,6 @@ public class ElasticsearchService {
 		List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
 		List<Map<String, String>> claimMap = (List<Map<String, String>>) hit.getSource().get("claims");
 		if (claimMap != null) {
-			// System.out.println(claimMap);
 			for (Map<String, String> entry : claimMap) {
 				String propertyId = entry.get("property-id");
 				String objectId = entry.get("object-id");
@@ -235,7 +232,7 @@ public class ElasticsearchService {
 		return entity;
 	}
 
-	public boolean isResponseValid(SearchResponse response) {
+	private boolean isResponseValid(SearchResponse response) {
 		return response != null && response.getHits().totalHits() > 0;
 	}
 

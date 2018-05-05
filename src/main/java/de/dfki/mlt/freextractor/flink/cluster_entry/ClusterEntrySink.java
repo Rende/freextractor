@@ -35,9 +35,13 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 				.field("relation", clusterEntry.getClusterId().getRelationLabel())
 				.field("relation-id", clusterEntry.getClusterId().getRelationId())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
-				.field("subj-name", clusterEntry.getSubjectName()).field("obj-name", clusterEntry.getObjectName())
-				.field("tok-sent", clusterEntry.getTokenizedSentence()).field("page-id", clusterEntry.getPageId())
-				.field("subj-pos", clusterEntry.getSubjectPosition()).field("obj-pos", clusterEntry.getObjectPosition())
+				.field("subj-name", clusterEntry.getSubjectName())
+				.field("obj-name", clusterEntry.getObjectName())
+				.field("relation-phrase", clusterEntry.getRelationPhrase())
+				.field("tok-sent", clusterEntry.getTokenizedSentence())
+				.field("page-id", clusterEntry.getPageId())
+				.field("subj-pos", clusterEntry.getSubjectPosition())
+				.field("obj-pos", clusterEntry.getObjectPosition())
 				.startArray("words");
 
 		for (Map.Entry<String, Integer> entry : clusterEntry.getHistogram().entrySet()) {

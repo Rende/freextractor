@@ -15,18 +15,20 @@ public class ClusterEntry {
 	private String tokenizedSentence;
 	private String subjectName;
 	private String objectName;
+	private String relationPhrase;
 	private Integer pageId;
 	private Integer subjectPosition;
 	private Integer objectPosition;
 	private HashMap<String, Integer> histogram;
 
-	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, Integer pageId,
+	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, String relationPhrase, Integer pageId,
 			Integer subjectPosition, Integer objectPosition, HashMap<String, Integer> histogram) {
 
 		this.clusterId = id;
 		this.tokenizedSentence = tokenizedSentence;
 		this.subjectName = subjectName;
 		this.objectName = objectName;
+		this.relationPhrase = relationPhrase;
 		this.pageId = pageId;
 		this.subjectPosition = subjectPosition;
 		this.objectPosition = objectPosition;
@@ -95,5 +97,13 @@ public class ClusterEntry {
 
 	public void setObjectName(String objectName) {
 		this.objectName = objectName;
+	}
+
+	public String getRelationPhrase() {
+		return relationPhrase;
+	}
+
+	public void setRelationPhrase(String relationPhrase) {
+		this.relationPhrase = relationPhrase;
 	}
 }

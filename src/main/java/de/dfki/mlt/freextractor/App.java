@@ -90,13 +90,5 @@ public class App {
 		JobExecutionResult result = env.execute("docCountingApp");
 		return result.isJobExecutionResult();
 	}
-	
-	public static boolean constructMatrixPerClusterApp() {
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(14);
-		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
-		
-		return false;
-	}
 
 }

@@ -18,7 +18,7 @@ import org.javatuples.Pair;
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.SentenceItem;
+import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.Type;
 
 /**
@@ -33,19 +33,20 @@ public class ClusterEntryMap
 	private static final long serialVersionUID = 1L;
 	private static final String INSTANCE_OF_RELATION = "P31";
 	private static final String SUBCLASS_OF_RELATION = "P279";
+	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
 	private Entity subject;
 	private HashMap<String, Entity> entityMap;
 	private HashMap<String, Entity> entityParentMap;
-	private Integer objectPosition;
-	private Integer subjectPosition;
-	private Integer objectIndexInSentence;
+	public Integer objectPosition;
+	public Integer subjectPosition;
+	public Integer objectIndexInSentence;
 
 	// pageId, subjectId, title, sentence, tokenizedSentence
 	@Override
 	public void flatMap(Tuple5<Integer, String, String, String, String> value, Collector<ClusterEntry> out)
 			throws Exception {
-		List<SentenceItem> sentenceItemList = App.helper.getSentenceItemList(value.f3);
-		List<SentenceItem> objectList = getObjectList(sentenceItemList);
+		List<Word> words = App.helper.getWordList(value.f3);
+		List<Word> objectList = getObjectList(words);
 		subject = App.esService.getEntity(value.f1);
 		if (subject != null) {
 			String tokenizedSentence = removeSubject(value.f4);
@@ -62,8 +63,11 @@ public class ClusterEntryMap
 						if (clusterId != null) {
 							HashMap<String, Integer> histogram = createHistogram(
 									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
+							//TODO: Relation Phrase should be extracted from tokenized sentence.
+							String relationPhrase = getRelationPhrase(words);
 							ClusterEntry entry = new ClusterEntry(clusterId, value.f4, subject.getLabel(),
-									object.getLabel(), value.f0, subjectPosition, objectPosition, histogram);
+									object.getLabel(), relationPhrase, value.f0, subjectPosition, objectPosition,
+									histogram);
 							out.collect(entry);
 						} else {
 							// App.LOG.info("No cluster entry for subject id: "
@@ -79,9 +83,9 @@ public class ClusterEntryMap
 	public HashMap<String, Integer> createHistogram(String text) {
 		text = getObjectCleanSentence(text);
 		HashMap<String, Integer> histogram = new HashMap<String, Integer>();
-		String punctutations = "`.,:;&*!?[['''''']]|=+-/";
+
 		for (String token : text.split(" ")) {
-			if (!punctutations.contains(token) && !containsOnlyDigits(token)) {
+			if (isTextOnly(token)) {
 				int count = 0;
 				if (histogram.containsKey(token)) {
 					count = histogram.get(token);
@@ -91,6 +95,24 @@ public class ClusterEntryMap
 			}
 		}
 		return histogram;
+	}
+
+	public String getRelationPhrase(List<Word> words) {
+		StringBuilder builder = new StringBuilder();
+		for (int i = subjectPosition + 1; i < objectPosition; i++) {
+			Word word = words.get(i);
+			if (word.getPosition() == i) {
+				if (word.getType() == Type.SUBJECT)
+					// this case is very unlikely
+					builder.append(word.getSurface().replaceAll("'''", "") + " ");
+				else if (word.getType() == Type.OBJECT)
+					builder.append(App.helper.getCleanObjectLabel(word.getSurface(), false) + " ");
+				else if (isTextOnly(word.getSurface()))
+					builder.append(word.getSurface() + " ");
+			}
+		}
+		return builder.toString().trim();
+
 	}
 
 	public String removeSubject(String text) {
@@ -140,7 +162,11 @@ public class ClusterEntryMap
 		return true;
 	}
 
-	public HashMap<String, Entity> getEntityParentMap(List<SentenceItem> sentenceObjectList) {
+	private boolean isTextOnly(String text) {
+		return !PUNCTUATIONS.contains(text) && !containsOnlyDigits(text);
+	}
+
+	public HashMap<String, Entity> getEntityParentMap(List<Word> sentenceObjectList) {
 		List<String> entityIdList = new ArrayList<String>();
 		List<String> parentIdList = new ArrayList<String>();
 
@@ -152,7 +178,7 @@ public class ClusterEntryMap
 			}
 			Entity object = entityMap.get(subjectClaim.getValue1());
 			if (object != null && object.getClaims() != null) {
-				for (SentenceItem sentenceObject : sentenceObjectList) {
+				for (Word sentenceObject : sentenceObjectList) {
 					if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
 						List<Pair<String, String>> objectClaims = object.getClaims();
 						for (Pair<String, String> objectClaim : objectClaims) {
@@ -181,11 +207,10 @@ public class ClusterEntryMap
 		return objectParentMap;
 	}
 
-	private ClusterId getClusterKey(String subjectType, Entity object, Entity property,
-			List<SentenceItem> sentenceObjectList) {
+	private ClusterId getClusterKey(String subjectType, Entity object, Entity property, List<Word> sentenceObjectList) {
 
 		for (int i = 0; i < sentenceObjectList.size(); i++) {
-			SentenceItem sentenceObject = sentenceObjectList.get(i);
+			Word sentenceObject = sentenceObjectList.get(i);
 			if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
 				Entity objectParent = entityParentMap.get(object.getId());
 				String objectType = getEntityType(objectParent, object);
@@ -233,9 +258,9 @@ public class ClusterEntryMap
 		return entityMap;
 	}
 
-	public List<SentenceItem> getObjectList(List<SentenceItem> sentenceItemList) {
-		List<SentenceItem> objectList = new ArrayList<SentenceItem>();
-		for (SentenceItem item : sentenceItemList) {
+	public List<Word> getObjectList(List<Word> sentenceItemList) {
+		List<Word> objectList = new ArrayList<Word>();
+		for (Word item : sentenceItemList) {
 			if (item.getType().equals(Type.OBJECT)) {
 				item.setSurface(App.helper.getCleanObjectLabel(item.getSurface(), true));
 				objectList.add(item);

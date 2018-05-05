@@ -11,7 +11,7 @@ import java.util.List;
 import org.junit.Test;
 
 import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.SentenceItem;
+import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 
@@ -108,7 +108,7 @@ public class ClusteringMapTest {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
-		List<SentenceItem> actualList = helper.getSentenceItemList(test);
+		List<Word> actualList = helper.getWordList(test);
 		assertThat(actualList).extracting("position").containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		assertThat(actualList).extracting("surface").containsExactly("''' Saint-Esteben '''", "be", "a",
 				"[[ commune of France | commune ]]", "in", "the", "[[ pyrénées-atlantique ]]",
@@ -123,12 +123,45 @@ public class ClusteringMapTest {
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 
-		List<SentenceItem> sentenceItemList = helper.getSentenceItemList(test);
-		List<SentenceItem> actual = clusteringMap.getObjectList(sentenceItemList);
+		List<Word> sentenceItemList = helper.getWordList(test);
+		List<Word> actual = clusteringMap.getObjectList(sentenceItemList);
 		assertThat(actual).extracting("position").containsExactly(3, 6, 7, 10);
 		assertThat(actual).extracting("surface").containsExactly("Commune_of_France", "Pyrénées-atlantique",
 				"Departments_of_France", "France");
+	}
+	
+	@Test
+	public void testGetRelationPhrase() {
+		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
+				+ "the ' '' [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+				+ "in south-western [[ France ]] .";
 
+		List<Word> wordList = helper.getWordList(test);
+		String expectedRelationPhrase = "be a commune in the";
+		clusteringMap.subjectPosition = 0;
+		clusteringMap.objectPosition = 6;
+		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
+		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
+		
+		String testNoSubject = "'' a b c '' [[ d | e ]] '' x y [[ z ]]";
+		List<Word> words = helper.getWordList(testNoSubject);
+		String expRelationPhrase = "a b c e x y";
+		clusteringMap.subjectPosition = -1;
+		clusteringMap.objectPosition = 9;
+		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
+		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
+	}
+	
+	@Test
+	public void testGetCleanObjectLabel() {
+		String test = "[[ abc xyz | def ]]";
+		String expectedSurface = "def";
+		String actualSurface = helper.getCleanObjectLabel(test, false);
+		assertThat(actualSurface).isEqualTo(expectedSurface);
+		
+		String expectedLabel = "Abc_xyz";
+		String actualLabel = helper.getCleanObjectLabel(test, true);
+		assertThat(actualLabel).isEqualTo(expectedLabel);
 	}
 
 }
