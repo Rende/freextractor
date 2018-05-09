@@ -4,10 +4,14 @@
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple5;
@@ -18,8 +22,16 @@ import org.javatuples.Pair;
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.Type;
+import de.dfki.mlt.freextractor.flink.Word;
+import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.pipeline.Annotation;
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.util.CoreMap;
 
 /**
  * @author Aydan Rende, DFKI
@@ -34,6 +46,7 @@ public class ClusterEntryMap
 	private static final String INSTANCE_OF_RELATION = "P31";
 	private static final String SUBCLASS_OF_RELATION = "P279";
 	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
+	protected StanfordCoreNLP pipeline;
 	private Entity subject;
 	private HashMap<String, Entity> entityMap;
 	private HashMap<String, Entity> entityParentMap;
@@ -63,11 +76,11 @@ public class ClusterEntryMap
 						if (clusterId != null) {
 							HashMap<String, Integer> histogram = createHistogram(
 									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
-							//TODO: Relation Phrase should be extracted from tokenized sentence.
 							String relationPhrase = getRelationPhrase(words);
 							ClusterEntry entry = new ClusterEntry(clusterId, value.f4, subject.getLabel(),
-									object.getLabel(), relationPhrase, value.f0, subjectPosition, objectPosition,
-									histogram);
+									object.getLabel(), value.f0, subjectPosition, objectPosition, histogram);
+							entry.setRelationPhrase(relationPhrase);
+							entry.setBagOfWords(getBagOfWords(relationPhrase));
 							out.collect(entry);
 						} else {
 							// App.LOG.info("No cluster entry for subject id: "
@@ -112,7 +125,6 @@ public class ClusterEntryMap
 			}
 		}
 		return builder.toString().trim();
-
 	}
 
 	public String removeSubject(String text) {
@@ -271,11 +283,44 @@ public class ClusterEntryMap
 		return objectList;
 	}
 
+	public Set<String> getBagOfWords(String text) {
+		text = text.toLowerCase();
+		Set<String> bagOfWords = Arrays.asList(lemmatize(text).split(" ")).stream().collect(Collectors.toSet());
+		return bagOfWords;
+	}
+
+	public String lemmatize(String documentText) {
+		StringBuilder builder = new StringBuilder();
+		Annotation document = new Annotation(documentText);
+		this.pipeline.annotate(document);
+		List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+		for (CoreMap sentence : sentences) {
+			for (CoreLabel token : sentence.get(TokensAnnotation.class)) {
+				String tag = token.get(PartOfSpeechAnnotation.class);
+				if (tag.startsWith("V") || tag.startsWith("N")) {
+					String image = token.get(LemmaAnnotation.class);
+					image = replaceParantheses(image);
+					builder.append(image + " ");
+				}
+			}
+		}
+		return builder.toString().trim();
+	}
+
+	public String replaceParantheses(String image) {
+		return image = image.replaceAll("-lrb-", "\\(").replaceAll("-rrb-", "\\)").replaceAll("-lcb-", "\\{")
+				.replaceAll("-rcb-", "\\}").replaceAll("-lsb-", "\\[").replaceAll("-rsb-", "\\]");
+	}
+
 	@Override
 	public void open(Configuration parameters) {
 		subjectPosition = -1;
 		objectPosition = -1;
 		objectIndexInSentence = -1;
+		Properties props;
+		props = new Properties();
+		props.put("annotators", "tokenize, ssplit, pos, lemma");
+		pipeline = new StanfordCoreNLP(props);
 	}
 
 }

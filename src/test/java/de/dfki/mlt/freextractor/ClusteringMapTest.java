@@ -4,15 +4,17 @@
 package de.dfki.mlt.freextractor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Word;
-import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 
 /**
@@ -82,8 +84,7 @@ public class ClusteringMapTest {
 		String actualSentence = clusteringMap.getObjectCleanSentence(testSentence);
 		String expectedSentece = "the  be a process of debt restructuring by  "
 				+ "that begin on january 14 , 2005 , and allow it to resume payment "
-				+ "on 76 % of the we dollar 82 billion in "
-				+ "sovereign bond s that default in 2001 at the depth of "
+				+ "on 76 % of the we dollar 82 billion in " + "sovereign bond s that default in 2001 at the depth of "
 				+ "the worst economic crisis in the nation ' s history .";
 		assertThat(actualSentence).isEqualTo(expectedSentece);
 	}
@@ -104,20 +105,6 @@ public class ClusteringMapTest {
 	}
 
 	@Test
-	public void testGetSentenceItemList() {
-		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
-				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
-				+ "in south-western [[ France ]] .";
-		List<Word> actualList = helper.getWordList(test);
-		assertThat(actualList).extracting("position").containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
-		assertThat(actualList).extracting("surface").containsExactly("''' Saint-Esteben '''", "be", "a",
-				"[[ commune of France | commune ]]", "in", "the", "[[ pyrénées-atlantique ]]",
-				"[[ Departments of France | department ]]", "in", "south-western", "[[ France ]]", ".");
-		assertThat(actualList).extracting("type").containsExactly(Type.SUBJECT, Type.OTHER, Type.OTHER, Type.OBJECT,
-				Type.OTHER, Type.OTHER, Type.OBJECT, Type.OBJECT, Type.OTHER, Type.OTHER, Type.OBJECT, Type.OTHER);
-	}
-
-	@Test
 	public void testGetObjectList() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
@@ -129,7 +116,7 @@ public class ClusteringMapTest {
 		assertThat(actual).extracting("surface").containsExactly("Commune_of_France", "Pyrénées-atlantique",
 				"Departments_of_France", "France");
 	}
-	
+
 	@Test
 	public void testGetRelationPhrase() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
@@ -142,7 +129,7 @@ public class ClusteringMapTest {
 		clusteringMap.objectPosition = 6;
 		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
-		
+
 		String testNoSubject = "'' a b c '' [[ d | e ]] '' x y [[ z ]]";
 		List<Word> words = helper.getWordList(testNoSubject);
 		String expRelationPhrase = "a b c e x y";
@@ -151,17 +138,17 @@ public class ClusteringMapTest {
 		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
 	}
-	
-	@Test
-	public void testGetCleanObjectLabel() {
-		String test = "[[ abc xyz | def ]]";
-		String expectedSurface = "def";
-		String actualSurface = helper.getCleanObjectLabel(test, false);
-		assertThat(actualSurface).isEqualTo(expectedSurface);
-		
-		String expectedLabel = "Abc_xyz";
-		String actualLabel = helper.getCleanObjectLabel(test, true);
-		assertThat(actualLabel).isEqualTo(expectedLabel);
-	}
 
+	@Test
+	public void testGetBagOfWords() {
+		String text = "went to the grocery shop which might be gone to the";
+		Set<String> bagOfWords = new HashSet<String>();
+		bagOfWords.add("go");
+		bagOfWords.add("grocery");
+		bagOfWords.add("shop");
+		bagOfWords.add("be");
+		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(text);
+//		System.out.println(bagOfWords.equals(actualBagOfWords));
+		assertEquals(bagOfWords, actualBagOfWords);
+	}
 }

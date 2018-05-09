@@ -4,6 +4,7 @@
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * @author Aydan Rende, DFKI
@@ -20,15 +21,15 @@ public class ClusterEntry {
 	private Integer subjectPosition;
 	private Integer objectPosition;
 	private HashMap<String, Integer> histogram;
+	private Set<String> bagOfWords;
 
-	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, String relationPhrase, Integer pageId,
+	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, Integer pageId,
 			Integer subjectPosition, Integer objectPosition, HashMap<String, Integer> histogram) {
 
 		this.clusterId = id;
 		this.tokenizedSentence = tokenizedSentence;
 		this.subjectName = subjectName;
 		this.objectName = objectName;
-		this.relationPhrase = relationPhrase;
 		this.pageId = pageId;
 		this.subjectPosition = subjectPosition;
 		this.objectPosition = objectPosition;
@@ -105,5 +106,13 @@ public class ClusterEntry {
 
 	public void setRelationPhrase(String relationPhrase) {
 		this.relationPhrase = relationPhrase;
+	}
+
+	public Set<String> getBagOfWords() {
+		return bagOfWords;
+	}
+
+	public void setBagOfWords(Set<String> bagOfWords) {
+		this.bagOfWords = bagOfWords;
 	}
 }
