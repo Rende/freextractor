@@ -117,30 +117,6 @@ public class ElasticsearchService {
 		return createIndexResponse != null && createIndexResponse.isAcknowledged();
 	}
 
-	public boolean putMappingForRelations() throws IOException {
-		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
-		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
-				.startObject(Config.getInstance().getString(Config.WIKIPEDIA_RELATION)).startObject("properties")
-				.startObject("page-id").field("type", "integer").field("index", "true").endObject()
-				.startObject("subject-id").field("type", "keyword").field("index", "true").endObject()
-				.startObject("subject-index").field("type", "integer").field("index", "true").endObject()
-				.startObject("object-id").field("type", "keyword").field("index", "true").endObject()
-				.startObject("object-index").field("type", "integer").field("index", "true").endObject()
-				.startObject("surface").endObject().startObject("start-index").field("type", "integer")
-				.field("index", "true").endObject().startObject("end-index").field("type", "integer")
-				.field("index", "true").endObject().startObject("property-id").field("type", "keyword")
-				.field("index", "true").endObject().startObject("alias").field("type", "text").endObject().endObject() // properties
-				.endObject()// documentType
-				.endObject();
-
-		App.LOG.debug("Mapping for wikipedia relations: " + mappingBuilder.string());
-		PutMappingResponse putMappingResponse = indicesAdminClient
-				.preparePutMapping(Config.getInstance().getString(Config.WIKIPEDIA_RELATION_INDEX))
-				.setType(Config.getInstance().getString(Config.WIKIPEDIA_RELATION)).setSource(mappingBuilder).execute()
-				.actionGet();
-		return putMappingResponse.isAcknowledged();
-	}
-
 	public boolean putMappingForClusterEntry() throws IOException {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
 		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
