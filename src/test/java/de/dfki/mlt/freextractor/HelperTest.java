@@ -29,12 +29,12 @@ public class HelperTest {
 	
 	@Test
 	public void testGetCleanObjectLabel() {
-		String test = "[[ abc xyz | def ]]";
-		String expectedSurface = "def";
+		String test = "[[ sonata#the baroque sonata | sonata ]]";
+		String expectedSurface = "sonata";
 		String actualSurface = helper.getCleanObjectLabel(test, false);
 		assertThat(actualSurface).isEqualTo(expectedSurface);
 		
-		String expectedLabel = "Abc_xyz";
+		String expectedLabel = "Sonata#the_baroque_sonata";
 		String actualLabel = helper.getCleanObjectLabel(test, true);
 		assertThat(actualLabel).isEqualTo(expectedLabel);
 	}

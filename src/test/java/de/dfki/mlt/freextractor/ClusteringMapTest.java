@@ -130,13 +130,19 @@ public class ClusteringMapTest {
 		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
 
-		String testNoSubject = "'' a b c '' [[ d | e ]] '' x y [[ z ]]";
+		String testNoSubject = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
 		List<Word> words = helper.getWordList(testNoSubject);
-		String expRelationPhrase = "a b c e x y";
-		clusteringMap.subjectPosition = -1;
-		clusteringMap.objectPosition = 9;
+		String expRelationPhrase = "is the business school of the";
+		clusteringMap.subjectPosition = 0;
+		clusteringMap.objectPosition = 6;
 		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
+		Set<String> bagOfWords = new HashSet<String>();
+		bagOfWords.add("be");
+		bagOfWords.add("business");
+		bagOfWords.add("school");
+		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(actlRelationPhrase);
+		assertEquals(bagOfWords, actualBagOfWords);
 	}
 
 	@Test
@@ -150,5 +156,15 @@ public class ClusteringMapTest {
 		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(text);
 //		System.out.println(bagOfWords.equals(actualBagOfWords));
 		assertEquals(bagOfWords, actualBagOfWords);
+		
+		String alias = "Norwegian List of Lights ID";
+		Set<String> bow = new HashSet<String>();
+		bow.add("list");
+		bow.add("light");
+		bow.add("id");
+		Set<String> actualBow = clusteringMap.getBagOfWords(alias);
+//		System.out.println(bow.equals(actualBow));
+		assertEquals(bow, actualBow);
 	}
+	
 }
