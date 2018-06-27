@@ -39,7 +39,6 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
-import org.javatuples.Pair;
 
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.preferences.Config;
@@ -124,16 +123,13 @@ public class ElasticsearchService {
 				.startObject("subj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
-				.startObject("relation-id").field("type", "keyword").endObject()
-				.startObject("cluster-id").field("type", "keyword").field("index", "true").endObject()
-				.startObject("subj-name").field("type", "keyword").endObject()
-				.startObject("obj-name").field("type", "keyword").endObject()
-				.startObject("relation-phrase").field("type", "keyword").endObject()
-				.startObject("tok-sent").field("type", "text").endObject()
-				.startObject("page-id").field("type", "integer").endObject()
-				.startObject("subj-pos").field("type", "integer").endObject()
-				.startObject("obj-pos").field("type", "integer").endObject()
-				.startObject("words").startObject("properties").startObject("word")
+				.startObject("relation-id").field("type", "keyword").endObject().startObject("cluster-id")
+				.field("type", "keyword").field("index", "true").endObject().startObject("subj-name")
+				.field("type", "keyword").endObject().startObject("obj-name").field("type", "keyword").endObject()
+				.startObject("relation-phrase").field("type", "keyword").endObject().startObject("tok-sent")
+				.field("type", "text").endObject().startObject("page-id").field("type", "integer").endObject()
+				.startObject("subj-pos").field("type", "integer").endObject().startObject("obj-pos")
+				.field("type", "integer").endObject().startObject("words").startObject("properties").startObject("word")
 				.field("type", "keyword").endObject().startObject("count").field("type", "integer").endObject()
 				.endObject().endObject().endObject() // properties
 				.endObject() // documentType
@@ -194,16 +190,7 @@ public class ElasticsearchService {
 		String wikiTitle = hit.getSource().get("wiki-title").toString();
 		List<String> aliases = (ArrayList<String>) hit.getSource().get("aliases");
 		List<String> tokAliases = (ArrayList<String>) hit.getSource().get("tok-aliases");
-
-		List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-		List<Map<String, String>> claimMap = (List<Map<String, String>>) hit.getSource().get("claims");
-		if (claimMap != null) {
-			for (Map<String, String> entry : claimMap) {
-				String propertyId = entry.get("property-id");
-				String objectId = entry.get("object-id");
-				claims.add(new Pair<String, String>(propertyId, objectId));
-			}
-		}
+		List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) hit.getSource().get("claims");
 		Entity entity = new Entity(id, type, label, tokLabel, wikiTitle, aliases, tokAliases, claims);
 		return entity;
 	}
@@ -230,18 +217,13 @@ public class ElasticsearchService {
 				String type = response.getSource().get("type").toString();
 				String label = response.getSource().get("label").toString();
 				String tokLabel = response.getSource().get("tok-label").toString();
-				String wikipediaTitle = response.getSource().get("wiki-title").toString();
+				String wikipediaTitle = "";
+				if (response.getSource().containsKey("wiki-title"))
+					wikipediaTitle = response.getSource().get("wiki-title").toString();
 				List<String> aliases = (ArrayList<String>) response.getSource().get("aliases");
 				List<String> tokAliases = (ArrayList<String>) response.getSource().get("tok-aliases");
-				List<Pair<String, String>> claims = new ArrayList<Pair<String, String>>();
-				List<Map<String, String>> claimMap = (List<Map<String, String>>) response.getSource().get("claims");
-				if (claimMap != null) {
-					for (Map<String, String> entry : claimMap) {
-						String propertyId = entry.get("property-id");
-						String objectId = entry.get("object-id");
-						claims.add(new Pair<String, String>(propertyId, objectId));
-					}
-				}
+				List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) response.getSource()
+						.get("claims");
 				itemList.add(new Entity(id, type, label, tokLabel, wikipediaTitle, aliases, tokAliases, claims));
 			}
 		}

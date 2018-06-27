@@ -6,6 +6,7 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,9 +14,12 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import de.dfki.lt.tools.tokenizer.output.Outputter;
+import de.dfki.lt.tools.tokenizer.output.Token;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
+import de.dfki.mlt.munderline.MunderLine;
 
 /**
  * @author Aydan Rende, DFKI
@@ -119,28 +123,28 @@ public class ClusteringMapTest {
 
 	@Test
 	public void testGetRelationPhrase() {
-		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
-				+ "the ' '' [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
-				+ "in south-western [[ France ]] .";
+		String test = "''''' Mr. Willowby ’ s Christmas Tree ''''' is a "
+				+ "[[ television ]] [[ Christmas by medium | Christmas special ]]"
+				+ " that first aired December 6 , 1995 on [[ CBS ]] .";
 
 		List<Word> wordList = helper.getWordList(test);
-		String expectedRelationPhrase = "be a commune in the";
+		String expectedRelationPhrase = "is a Television Christmas_by_medium that first aired December on";
 		clusteringMap.subjectPosition = 0;
-		clusteringMap.objectPosition = 6;
+		clusteringMap.objectPosition = 13;
 		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
 
 		String testNoSubject = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
 		List<Word> words = helper.getWordList(testNoSubject);
-		String expRelationPhrase = "is the business school of the";
+		String expRelationPhrase = "is the Business_school of the";
 		clusteringMap.subjectPosition = 0;
 		clusteringMap.objectPosition = 6;
 		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
 		Set<String> bagOfWords = new HashSet<String>();
 		bagOfWords.add("be");
-		bagOfWords.add("business");
-		bagOfWords.add("school");
+		bagOfWords.add("business_school");
+		bagOfWords.add("of");
 		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(actlRelationPhrase);
 		assertEquals(bagOfWords, actualBagOfWords);
 	}
@@ -154,17 +158,37 @@ public class ClusteringMapTest {
 		bagOfWords.add("shop");
 		bagOfWords.add("be");
 		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(text);
-//		System.out.println(bagOfWords.equals(actualBagOfWords));
 		assertEquals(bagOfWords, actualBagOfWords);
-		
+
 		String alias = "Norwegian List of Lights ID";
 		Set<String> bow = new HashSet<String>();
 		bow.add("list");
+		bow.add("of");
 		bow.add("light");
 		bow.add("id");
 		Set<String> actualBow = clusteringMap.getBagOfWords(alias);
-//		System.out.println(bow.equals(actualBow));
 		assertEquals(bow, actualBow);
 	}
-	
+
+	@Test
+	public void testDependencyParser() {
+		String testSentence = "'' ''' black dog ''' '' be a song by english rock band "
+				+ "[[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
+		List<Token> tokenizedSentence = Outputter.createTokens(clusteringMap.jtok.tokenize(testSentence, "en"));
+		List<String> tokensAsString = new ArrayList<>();
+		for (Token oneToken : tokenizedSentence) {
+			String tokenImage = oneToken.getPtbImage();
+			if (tokenImage == null) {
+				tokenImage = oneToken.getImage();
+			}
+			tokensAsString.add(tokenImage);
+		}
+		String[][] coNllTable = clusteringMap.munderLine.processTokenizedSentence(tokensAsString);
+		for (int i = 0; i < coNllTable.length; i++) {
+			for (int j = 0; j < coNllTable[0].length; j++) {
+				System.out.print(coNllTable[i][j] + " ");
+			}
+			System.out.println();
+		}
+	}
 }

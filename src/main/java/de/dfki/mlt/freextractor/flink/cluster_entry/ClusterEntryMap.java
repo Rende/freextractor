@@ -3,6 +3,7 @@
  */
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,17 +14,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
-import org.javatuples.Pair;
 
+import de.dfki.lt.tools.tokenizer.JTok;
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.Word;
+import de.dfki.mlt.munderline.MunderLine;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
@@ -46,6 +49,8 @@ public class ClusterEntryMap
 	private static final String INSTANCE_OF_RELATION = "P31";
 	private static final String SUBCLASS_OF_RELATION = "P279";
 	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
+	public MunderLine munderLine;
+	public JTok jtok;
 	protected StanfordCoreNLP pipeline;
 	private Entity subject;
 	private HashMap<String, Entity> entityMap;
@@ -68,9 +73,9 @@ public class ClusterEntryMap
 			Entity subjectParent = entityParentMap.get(subject.getId());
 			String subjectType = getEntityType(subjectParent, subject);
 			if (subjectType != null) {
-				for (Pair<String, String> pair : subject.getClaims()) {
-					Entity property = entityMap.get(pair.getValue0());
-					Entity object = entityMap.get(pair.getValue1());
+				for (HashMap<String, String> claim : subject.getClaims()) {
+					Entity property = entityMap.get(claim.get("property-id"));
+					Entity object = entityMap.get(claim.get("object-id"));
 					if (object != null && property != null) {
 						ClusterId clusterId = getClusterKey(subjectType, object, property, objectList);
 						if (clusterId != null) {
@@ -78,15 +83,10 @@ public class ClusterEntryMap
 									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
 							String relationPhrase = getRelationPhrase(words);
 							ClusterEntry entry = new ClusterEntry(clusterId, value.f4, subject.getLabel(),
-									object.getLabel(), value.f0, subjectPosition, objectPosition, histogram);
-							entry.setRelationPhrase(relationPhrase);
-							entry.setBagOfWords(getBagOfWords(relationPhrase));
+									object.getLabel(), relationPhrase, value.f0, subjectPosition, objectPosition,
+									histogram, getBagOfWords(relationPhrase));
 							out.collect(entry);
-						} else {
-							// App.LOG.info("No cluster entry for subject id: "
-							// + subject.getId() + " with object "
-							// + object.getId());
-						}
+						} 
 					}
 				}
 			}
@@ -119,7 +119,7 @@ public class ClusterEntryMap
 					// this case is very unlikely
 					builder.append(word.getSurface().replaceAll("'''", "") + " ");
 				else if (word.getType() == Type.OBJECT)
-					builder.append(App.helper.getCleanObjectLabel(word.getSurface(), false) + " ");
+					builder.append(App.helper.getObjectEntryLabel(word.getSurface()) + " ");
 				else if (isTextOnly(word.getSurface()))
 					builder.append(word.getSurface() + " ");
 			}
@@ -153,7 +153,7 @@ public class ClusterEntryMap
 		Matcher matcher = pattern.matcher(text);
 		StringBuffer buffer = new StringBuffer();
 		while (matcher.find()) {
-			String object = App.helper.getCleanObjectLabel(text.substring(matcher.start(), matcher.end()), false);
+			String object = App.helper.getCleanObject(text.substring(matcher.start(), matcher.end()));
 			try {
 				matcher.appendReplacement(buffer, object);
 			} catch (IllegalArgumentException e) {
@@ -182,22 +182,20 @@ public class ClusterEntryMap
 		List<String> entityIdList = new ArrayList<String>();
 		List<String> parentIdList = new ArrayList<String>();
 
-		for (Pair<String, String> subjectClaim : subject.getClaims()) {
-			if (subjectClaim.getValue0().equals(INSTANCE_OF_RELATION)
-					|| subjectClaim.getValue0().equals(SUBCLASS_OF_RELATION)) {
+		for (HashMap<String, String> subjectClaim : subject.getClaims()) {
+			if (subjectClaim.containsValue(INSTANCE_OF_RELATION) || subjectClaim.containsValue(SUBCLASS_OF_RELATION)) {
 				entityIdList.add(subject.getId());
-				parentIdList.add(subjectClaim.getValue1());
+				parentIdList.add(subjectClaim.get("object-id"));
 			}
-			Entity object = entityMap.get(subjectClaim.getValue1());
+			Entity object = entityMap.get(subjectClaim.get("object-id"));
 			if (object != null && object.getClaims() != null) {
 				for (Word sentenceObject : sentenceObjectList) {
 					if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
-						List<Pair<String, String>> objectClaims = object.getClaims();
-						for (Pair<String, String> objectClaim : objectClaims) {
-							if (objectClaim.getValue0().equals(INSTANCE_OF_RELATION)
-									|| objectClaim.getValue0().equals(SUBCLASS_OF_RELATION)) {
+						for (HashMap<String, String> objectClaim : object.getClaims()) {
+							if (objectClaim.containsValue(INSTANCE_OF_RELATION)
+									|| objectClaim.containsValue(SUBCLASS_OF_RELATION)) {
 								entityIdList.add(object.getId());
-								parentIdList.add(objectClaim.getValue1());
+								parentIdList.add(objectClaim.get("object-id"));
 							}
 						}
 					}
@@ -246,13 +244,10 @@ public class ClusterEntryMap
 		}
 	}
 
-	public HashMap<String, Entity> collectEntities(List<Pair<String, String>> claimObjectList) {
+	public HashMap<String, Entity> collectEntities(List<HashMap<String, String>> claimList) {
 		List<String> idSet = new ArrayList<String>();
-		for (Pair<String, String> pair : claimObjectList) {
-			// property-id
-			idSet.add(pair.getValue0());
-			// object-id
-			idSet.add(pair.getValue1());
+		for (HashMap<String, String> claim : claimList) {
+			idSet.addAll(claim.values());
 		}
 		HashMap<String, Entity> entityMap = new HashMap<String, Entity>();
 		if (!idSet.isEmpty()) {
@@ -274,7 +269,7 @@ public class ClusterEntryMap
 		List<Word> objectList = new ArrayList<Word>();
 		for (Word item : sentenceItemList) {
 			if (item.getType().equals(Type.OBJECT)) {
-				item.setSurface(App.helper.getCleanObjectLabel(item.getSurface(), true));
+				item.setSurface(App.helper.getObjectEntryLabel(item.getSurface()));
 				objectList.add(item);
 			} else if (item.getType().equals(Type.SUBJECT)) {
 				subjectPosition = item.getPosition();
@@ -297,7 +292,7 @@ public class ClusterEntryMap
 		for (CoreMap sentence : sentences) {
 			for (CoreLabel token : sentence.get(TokensAnnotation.class)) {
 				String tag = token.get(PartOfSpeechAnnotation.class);
-				if (tag.startsWith("V") || tag.startsWith("N")) {
+				if (tag.startsWith("VB") || tag.startsWith("NN") || tag.startsWith("IN")) {
 					String image = token.get(LemmaAnnotation.class);
 					image = replaceParantheses(image);
 					builder.append(image + " ");
@@ -321,6 +316,13 @@ public class ClusterEntryMap
 		props = new Properties();
 		props.put("annotators", "tokenize, ssplit, pos, lemma");
 		pipeline = new StanfordCoreNLP(props);
+		try {
+			munderLine = new MunderLine("EN_pipeline.conf");
+			jtok = new JTok();
+		} catch (ConfigurationException | IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 }

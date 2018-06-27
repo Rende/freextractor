@@ -9,3 +9,4 @@
 *.txt
 /local-repo/
 /src/main/resources/stanford-english-corenlp-2017-06-09-models.jar
+EN_pipeline.conf

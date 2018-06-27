@@ -12,7 +12,7 @@ import de.dfki.mlt.freextractor.flink.Word;
 
 public class HelperTest {
 	private Helper helper = new Helper();
-	
+
 	@Test
 	public void testGetWordList() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
@@ -26,18 +26,17 @@ public class HelperTest {
 		assertThat(actualList).extracting("type").containsExactly(Type.SUBJECT, Type.OTHER, Type.OTHER, Type.OBJECT,
 				Type.OTHER, Type.OTHER, Type.OBJECT, Type.OBJECT, Type.OTHER, Type.OTHER, Type.OBJECT, Type.OTHER);
 	}
-	
+
 	@Test
 	public void testGetCleanObjectLabel() {
 		String test = "[[ sonata#the baroque sonata | sonata ]]";
 		String expectedSurface = "sonata";
-		String actualSurface = helper.getCleanObjectLabel(test, false);
+		String actualSurface = helper.getCleanObject(test);
 		assertThat(actualSurface).isEqualTo(expectedSurface);
-		
+
 		String expectedLabel = "Sonata#the_baroque_sonata";
-		String actualLabel = helper.getCleanObjectLabel(test, true);
+		String actualLabel = helper.getObjectEntryLabel(test);
 		assertThat(actualLabel).isEqualTo(expectedLabel);
 	}
-
 
 }

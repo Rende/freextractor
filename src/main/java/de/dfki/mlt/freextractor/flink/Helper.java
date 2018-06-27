@@ -29,19 +29,8 @@ public class Helper {
 		}
 	}
 
-	public static String fromStringToWikilabel(String image) {
-		String label = "";
-		if (image.contains("|")) {
-			String[] images = image.split("\\|");
-			try {
-				label = images[0];
-			} catch (ArrayIndexOutOfBoundsException e) {
-				label = image.trim().replace("\\|", "");
-			}
-		} else {
-			label = image;
-		}
-		label = StringUtils.capitalize(label.trim().replaceAll(" ", "_"));
+	public static String fromStringToWikilabel(String label) {
+		label = StringUtils.capitalize(label.trim().replaceAll(" ", "_")).trim();
 		return label;
 	}
 
@@ -103,32 +92,35 @@ public class Helper {
 		return builder;
 	}
 
-	public String getCleanObjectLabel(String objectSurface, boolean isOriginalLabel) {
-		String label = cleanObjectLabel(objectSurface);
-		if (label.contains("|")) {
-			String[] objectSurfaceArray = label.split("\\|");
-			if (isOriginalLabel) {
-				try {
-					label = objectSurfaceArray[0];
-				} catch (ArrayIndexOutOfBoundsException e) {
-					label = label.replaceAll("\\[\\[", "").trim().replace("\\|", "");
-				}
-				label = Helper.fromStringToWikilabel(label);
+	public String getCleanObject(String objSurface) {
+		String cleanObjSurface = removeBracketsFromObject(objSurface);
+		String objectSurface = cleanObjSurface;
+		if (cleanObjSurface.contains("|")) {
+			String[] objSurfaceArray = cleanObjSurface.split("\\|");
+			if (objSurfaceArray.length > 1) {
+				objectSurface = objSurfaceArray[1];
 			} else {
-				if (objectSurfaceArray.length > 1) {
-					label = objectSurfaceArray[1];
-				} else {
-					label = label.replace("\\|", "");
-				}
+				objectSurface = cleanObjSurface.replace("\\|", "");
 			}
-		} else if (isOriginalLabel) {
-			label = Helper.fromStringToWikilabel(label);
 		}
-		return label.trim();
-
+		return objectSurface.trim();
 	}
 
-	public String cleanObjectLabel(String objectLabel) {
+	public String getObjectEntryLabel(String objectSurface) {
+		String label = removeBracketsFromObject(objectSurface);
+		if (label.contains("|")) {
+			String[] objSurfaceArray = label.split("\\|");
+			if (objSurfaceArray.length > 1) {
+				label = objSurfaceArray[0];
+			} else {
+				label = label.replace("\\|", "");
+			}
+		}
+		label = Helper.fromStringToWikilabel(label);
+		return label;
+	}
+
+	public String removeBracketsFromObject(String objectLabel) {
 		objectLabel = objectLabel.replaceAll("\\[\\[", "").replaceAll("\\]\\]", "").trim();
 		return objectLabel;
 	}

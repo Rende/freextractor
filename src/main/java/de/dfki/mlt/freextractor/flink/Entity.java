@@ -4,9 +4,8 @@
 package de.dfki.mlt.freextractor.flink;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-import org.javatuples.Pair;
 
 /**
  * @author Aydan Rende, DFKI
@@ -20,7 +19,7 @@ public class Entity {
 	private String wikiTitle;
 	private List<String> aliases;
 	private List<String> tokAliases;
-	private List<Pair<String, String>> claims;
+	private List<HashMap<String, String>> claims;
 
 	public Entity() {
 		id = "";
@@ -30,12 +29,11 @@ public class Entity {
 		wikiTitle = "";
 		aliases = new ArrayList<String>();
 		tokAliases = new ArrayList<String>();
-		claims = new ArrayList<Pair<String, String>>();
+		claims = new ArrayList<HashMap<String, String>>();
 	}
 
-	public Entity(String id, String type, String label, String tokLabel,
-			String wikipediaTitle, List<String> aliases,
-			List<String> tokAliases, List<Pair<String, String>> claims) {
+	public Entity(String id, String type, String label, String tokLabel, String wikipediaTitle, List<String> aliases,
+			List<String> tokAliases, List<HashMap<String, String>> claims) {
 		this.id = id;
 		this.type = type;
 		this.label = label;
@@ -116,7 +114,7 @@ public class Entity {
 	/**
 	 * @return the claims
 	 */
-	public List<Pair<String, String>> getClaims() {
+	public List<HashMap<String, String>> getClaims() {
 		return claims;
 	}
 
@@ -132,7 +130,7 @@ public class Entity {
 	 * @param claims
 	 *            the claims to set
 	 */
-	public void setClaims(List<Pair<String, String>> claims) {
+	public void setClaims(List<HashMap<String, String>> claims) {
 		this.claims = claims;
 	}
 
@@ -151,14 +149,16 @@ public class Entity {
 	}
 
 	/**
-	 * @param tokLabel the tokLabel to set
+	 * @param tokLabel
+	 *            the tokLabel to set
 	 */
 	public void setTokLabel(String tokLabel) {
 		this.tokLabel = tokLabel;
 	}
 
 	/**
-	 * @param tokAliases the tokAliases to set
+	 * @param tokAliases
+	 *            the tokAliases to set
 	 */
 	public void setTokAliases(List<String> tokAliases) {
 		this.tokAliases = tokAliases;

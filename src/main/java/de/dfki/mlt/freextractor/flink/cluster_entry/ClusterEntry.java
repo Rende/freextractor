@@ -3,6 +3,7 @@
  */
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -10,8 +11,12 @@ import java.util.Set;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntry {
+public class ClusterEntry implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private ClusterId clusterId;
 	private String tokenizedSentence;
 	private String subjectName;
@@ -23,17 +28,20 @@ public class ClusterEntry {
 	private HashMap<String, Integer> histogram;
 	private Set<String> bagOfWords;
 
-	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName, Integer pageId,
-			Integer subjectPosition, Integer objectPosition, HashMap<String, Integer> histogram) {
+	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName,
+			String relationPhrase, Integer pageId, Integer subjectPosition, Integer objectPosition,
+			HashMap<String, Integer> histogram, Set<String> bagOfWords) {
 
 		this.clusterId = id;
 		this.tokenizedSentence = tokenizedSentence;
 		this.subjectName = subjectName;
 		this.objectName = objectName;
+		this.relationPhrase = relationPhrase;
 		this.pageId = pageId;
 		this.subjectPosition = subjectPosition;
 		this.objectPosition = objectPosition;
 		this.histogram = histogram;
+		this.bagOfWords = bagOfWords;
 	}
 
 	public String getTokenizedSentence() {
