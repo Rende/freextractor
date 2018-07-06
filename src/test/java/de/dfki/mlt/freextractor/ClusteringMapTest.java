@@ -6,6 +6,7 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -124,22 +125,26 @@ public class ClusteringMapTest {
 				+ " that first aired December 6 , 1995 on [[ CBS ]] .";
 
 		List<Word> wordList = helper.getWordList(test);
-		String expectedRelationPhrase = "is a Television Christmas_by_medium that first aired December on";
+		String expectedRelationPhrase = "is a television Christmas special that first aired December on";
 		clusteringMap.subjectPosition = 0;
 		clusteringMap.objectPosition = 13;
 		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
+	}
 
+	@Test
+	public void testRelationPhrase() {
 		String testNoSubject = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
 		List<Word> words = helper.getWordList(testNoSubject);
-		String expRelationPhrase = "is the Business_school of the";
+		String expRelationPhrase = "is the business school of the";
 		clusteringMap.subjectPosition = 0;
 		clusteringMap.objectPosition = 6;
 		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
 		Set<String> bagOfWords = new HashSet<String>();
 		bagOfWords.add("be");
-		bagOfWords.add("business_school");
+		bagOfWords.add("business");
+		bagOfWords.add("school");
 		bagOfWords.add("of");
 		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(actlRelationPhrase);
 		assertEquals(bagOfWords, actualBagOfWords);
@@ -164,6 +169,17 @@ public class ClusteringMapTest {
 		bow.add("id");
 		Set<String> actualBow = clusteringMap.getBagOfWords(alias);
 		assertEquals(bow, actualBow);
+	}
+
+	@Test
+	public void testBagOfWords() {
+		String relationPhrase = "be a television Christmas special that first air December on";
+		Set<String> bow = new HashSet<String>();
+		String[] bowArray = { "that", "be", "television", "christmas", "air", "december", "on" };
+		bow.addAll(Arrays.asList(bowArray));
+		Set<String> actualBow = clusteringMap.getBagOfWords(relationPhrase);
+		assertEquals(bow, actualBow);
+
 	}
 
 }

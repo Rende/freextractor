@@ -24,7 +24,6 @@ import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.Word;
-import de.dfki.mlt.munderline.MunderLine;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
@@ -47,7 +46,6 @@ public class ClusterEntryMap
 	private static final String INSTANCE_OF_RELATION = "P31";
 	private static final String SUBCLASS_OF_RELATION = "P279";
 	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
-	public MunderLine munderLine;
 	public JTok jtok;
 	protected StanfordCoreNLP pipeline;
 	private Entity subject;
@@ -117,7 +115,7 @@ public class ClusterEntryMap
 					// this case is very unlikely
 					builder.append(word.getSurface().replaceAll("'''", "") + " ");
 				else if (word.getType() == Type.OBJECT)
-					builder.append(App.helper.getObjectEntryLabel(word.getSurface()) + " ");
+					builder.append(App.helper.getCleanObject(word.getSurface()) + " ");
 				else if (isTextOnly(word.getSurface()))
 					builder.append(word.getSurface() + " ");
 			}
