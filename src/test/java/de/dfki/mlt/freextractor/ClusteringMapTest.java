@@ -6,7 +6,6 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,12 +13,9 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import de.dfki.lt.tools.tokenizer.output.Outputter;
-import de.dfki.lt.tools.tokenizer.output.Token;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
-import de.dfki.mlt.munderline.MunderLine;
 
 /**
  * @author Aydan Rende, DFKI
@@ -170,25 +166,4 @@ public class ClusteringMapTest {
 		assertEquals(bow, actualBow);
 	}
 
-	@Test
-	public void testDependencyParser() {
-		String testSentence = "'' ''' black dog ''' '' be a song by english rock band "
-				+ "[[ lead zeppelin ]] , the open track on they [[ lead zeppelin iv | fourth album ]] .";
-		List<Token> tokenizedSentence = Outputter.createTokens(clusteringMap.jtok.tokenize(testSentence, "en"));
-		List<String> tokensAsString = new ArrayList<>();
-		for (Token oneToken : tokenizedSentence) {
-			String tokenImage = oneToken.getPtbImage();
-			if (tokenImage == null) {
-				tokenImage = oneToken.getImage();
-			}
-			tokensAsString.add(tokenImage);
-		}
-		String[][] coNllTable = clusteringMap.munderLine.processTokenizedSentence(tokensAsString);
-		for (int i = 0; i < coNllTable.length; i++) {
-			for (int j = 0; j < coNllTable[0].length; j++) {
-				System.out.print(coNllTable[i][j] + " ");
-			}
-			System.out.println();
-		}
-	}
 }

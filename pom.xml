@@ -81,11 +81,6 @@
 			<artifactId>stanford-english-corenlp-models</artifactId>
 			<version>1.0</version>
 		</dependency>
-		<dependency>
-			<groupId>de.dfki.mlt.munderline</groupId>
-			<artifactId>munderline</artifactId>
-			<version>1.0.1-SNAPSHOT</version>
-		</dependency>
 	</dependencies>
 	<build>
 		<plugins>

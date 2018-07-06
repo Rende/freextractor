@@ -3,7 +3,6 @@
  */
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.configuration.Configuration;
@@ -316,13 +314,6 @@ public class ClusterEntryMap
 		props = new Properties();
 		props.put("annotators", "tokenize, ssplit, pos, lemma");
 		pipeline = new StanfordCoreNLP(props);
-		try {
-			munderLine = new MunderLine("EN_pipeline.conf");
-			jtok = new JTok();
-		} catch (ConfigurationException | IOException e) {
-			e.printStackTrace();
-		}
-
 	}
 
 }
