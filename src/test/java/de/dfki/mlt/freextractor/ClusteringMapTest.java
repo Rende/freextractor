@@ -6,17 +6,21 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.junit.Test;
 
+import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Word;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
+import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterId;
 
 /**
  * @author Aydan Rende, DFKI
@@ -69,23 +73,22 @@ public class ClusteringMapTest {
 
 	@Test
 	public void testGetObjectCleanSentence() {
-		String test = "be a [[ commune of France | commune ]] in "
-				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
-				+ "in south-western [[ France ]] .";
+		String test = "be a [[ commune of France | commune ]] in the [[ pyrénées-atlantique ]] "
+				+ "[[ Departments of France | department ]] in south-western [[ France ]] .";
 		String actual = clusteringMap.getObjectCleanSentence(test);
 		String expected = "be a commune in the pyrénées-atlantique department in south-western France .";
 		assertThat(actual).isEqualTo(expected);
 
-		String testSentence = "the  be a process of [[ debt restructuring ]] by  "
+		String testSentence = "the be a process of [[ debt restructuring ]] by "
 				+ "that begin on january 14 , 2005 , and allow it to resume payment "
 				+ "on 76 % of the [[ unite state dollar | we $ ]] 82 billion in "
 				+ "[[ sovereign bond ]] s that default in 2001 at the depth of "
 				+ "[[ argentine economic crisis | the worst economic crisis ]] in the nation ' s history .";
 
 		String actualSentence = clusteringMap.getObjectCleanSentence(testSentence);
-		String expectedSentece = "the  be a process of debt restructuring by  "
+		String expectedSentece = "the be a process of debt restructuring by "
 				+ "that begin on january 14 , 2005 , and allow it to resume payment "
-				+ "on 76 % of the we dollar 82 billion in " + "sovereign bond s that default in 2001 at the depth of "
+				+ "on 76 % of the we dollar 82 billion in sovereign bond s that default in 2001 at the depth of "
 				+ "the worst economic crisis in the nation ' s history .";
 		assertThat(actualSentence).isEqualTo(expectedSentece);
 	}
@@ -95,12 +98,12 @@ public class ClusteringMapTest {
 		String test = "be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
-		String expected = "be a  in " + "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
+		String expected = "be a  in the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 		String actual = clusteringMap.removeObjectByIndex(test, 0);
 		assertThat(actual).isEqualTo(expected);
 		String expected2 = "be a [[ commune of France | commune ]] in "
-				+ "the  [[ Departments of France | department ]] " + "in south-western [[ France ]] .";
+				+ "the  [[ Departments of France | department ]] in south-western [[ France ]] .";
 		String actual2 = clusteringMap.removeObjectByIndex(test, 1);
 		assertThat(actual2).isEqualTo(expected2);
 	}
@@ -180,6 +183,88 @@ public class ClusteringMapTest {
 		Set<String> actualBow = clusteringMap.getBagOfWords(relationPhrase);
 		assertEquals(bow, actualBow);
 
+	}
+
+	@Test
+	public void testClusterEntryMap() {
+		String sentence = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
+		System.out.println("Sentence: " + sentence);
+		String tokenizedSentence = "''' nus business school ''' be the [[ business school ]] of the [[ national university of singapore ]] .";
+		System.out.println("Tokenized Sentence: " + tokenizedSentence);
+		List<Word> words = App.helper.getWordList(sentence);
+		System.out.println("\nWord List");
+		for (Word word : words) {
+			System.out.println(word.toString());
+		}
+		System.out.println("\nObject List");
+		List<Word> objectList = clusteringMap.getObjectList(words);
+		for (Word word : objectList) {
+			System.out.println(word.toString());
+		}
+		System.out.println();
+		Entity subject = App.esService.getEntity("Q6955642");
+		clusteringMap.subject = subject;
+		System.out.println("Subject: " + subject.getLabel());
+
+		String tokSentence = clusteringMap.removeSubject(tokenizedSentence);
+
+		System.out.println("Subjectless tok-sentence: " + tokSentence + "\n");
+		System.out.println("All entities of subject");
+		HashMap<String, Entity> entityMap = clusteringMap.collectEntities(subject.getClaims());
+		for (Entry<String, Entity> entry : entityMap.entrySet()) {
+			System.out.println("Entity id: " + entry.getKey() + " entity label:" + entry.getValue().getLabel());
+		}
+
+		assertThat(entityMap).containsOnlyKeys("Q1143635", "Q334", "Q738236", "P17", "P131", "P361", "P31");
+
+		clusteringMap.entityMap = entityMap;
+
+		System.out.println("\nParents");
+		HashMap<String, Entity> entityParentMap = clusteringMap.getEntityParentMap(objectList);
+		for (Entry<String, Entity> entry : entityParentMap.entrySet()) {
+			System.out.println("Entity id: " + entry.getKey() + " parent-entity id: " + entry.getValue().getId()
+					+ " parent-entity label: " + entry.getValue().getLabel());
+		}
+		assertThat(entityParentMap).containsOnlyKeys("Q738236", "Q6955642", "Q1143635");
+		clusteringMap.entityParentMap = entityParentMap;
+
+		Entity subjectParent = entityParentMap.get(subject.getId());
+		System.out.println(
+				"\nSubject parent label: " + subjectParent.getLabel() + " subject parent id: " + subjectParent.getId());
+		clusteringMap.subjectParent = subjectParent;
+
+		String subjectType = clusteringMap.getEntityType(subjectParent);
+		System.out.println("Subject type: " + subjectType + "\n");
+
+		String[] expectedRelationPhrases = { "is the", "is the business school of the" };
+		List<HashSet<String>> expectedBows = new ArrayList<HashSet<String>>();
+		expectedBows.add(0, new HashSet<>(Arrays.asList("be")));
+		expectedBows.add(1, new HashSet<>(Arrays.asList("be", "business", "school", "of")));
+		int index = 0;
+		for (HashMap<String, String> claim : subject.getClaims()) {
+			// for (Entry<String, String> entry : claim.entrySet()) {
+			// System.out.println("Claim " + entry.getKey() + ": " + entry.getValue());
+			// }
+			Entity property = entityMap.get(claim.get("property-id"));
+			Entity object = entityMap.get(claim.get("object-id"));
+			ClusterId clusterId = clusteringMap.createClusterId(object, property, objectList);
+			if (clusterId != null) {
+				System.out.println("Cluster id: " + clusterId.toString());
+				// HashMap<String, Integer> histogram = clusteringMap.createHistogram(
+				// clusteringMap.removeObjectByIndex(tokSentence,
+				// clusteringMap.objectIndexInSentence));
+				// for (Entry<String, Integer> hist : histogram.entrySet()) {
+				// System.out.println("Word: " + hist.getKey() + " Count: " + hist.getValue());
+				// }
+				String relationPhrase = clusteringMap.getRelationPhrase(words);
+				System.out.println("Relation Phrase: " + relationPhrase);
+				assertThat(relationPhrase).isEqualTo(expectedRelationPhrases[index]);
+				Set<String> bow = clusteringMap.getBagOfWords(relationPhrase);
+				assertEquals(bow, expectedBows.get(index));
+				index++;
+				System.out.println();
+			}
+		}
 	}
 
 }
