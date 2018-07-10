@@ -6,6 +6,7 @@ package de.dfki.mlt.freextractor.flink;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * @author Aydan Rende, DFKI
@@ -164,4 +165,18 @@ public class Entity {
 		this.tokAliases = tokAliases;
 	}
 
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("Id: " + this.id + " Label: " + this.label + " WikiTitle: " + this.wikiTitle + " \nAliases \n");
+		for (String alias : this.aliases) {
+			builder.append(alias + "\n");
+		}
+		builder.append("Claims\n");
+		for (HashMap<String, String> claimMap : this.claims) {
+			for (Entry<String, String> claim : claimMap.entrySet()) {
+				builder.append(claim.getKey() + ": " + claim.getValue() + "\n");
+			}
+		}
+		return builder.toString();
+	}
 }

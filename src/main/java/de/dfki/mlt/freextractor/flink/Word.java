@@ -41,4 +41,8 @@ public class Word {
 	public void setType(Type type) {
 		this.type = type;
 	}
+
+	public String toString() {
+		return "Surface: " + this.surface + " position: " + this.position + " type: " + this.type;
+	}
 }
