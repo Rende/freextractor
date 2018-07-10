@@ -48,11 +48,14 @@ public class ClusterEntryMap
 	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
 	public JTok jtok;
 	protected StanfordCoreNLP pipeline;
-	private Entity subject;
-	private HashMap<String, Entity> entityMap;
-	private HashMap<String, Entity> entityParentMap;
+	public Entity subject;
+	public Entity subjectParent;
+	public HashMap<String, Entity> entityMap;
+	public HashMap<String, Entity> entityParentMap;
+	// positions indicate the token position in the sentence
 	public Integer objectPosition;
 	public Integer subjectPosition;
+	// index refers the object in the object list
 	public Integer objectIndexInSentence;
 
 	// pageId, subjectId, title, sentence, tokenizedSentence
@@ -66,14 +69,14 @@ public class ClusterEntryMap
 			String tokenizedSentence = removeSubject(value.f4);
 			entityMap = collectEntities(subject.getClaims());
 			entityParentMap = getEntityParentMap(objectList);
-			Entity subjectParent = entityParentMap.get(subject.getId());
-			String subjectType = getEntityType(subjectParent, subject);
-			if (subjectType != null) {
+			subjectParent = entityParentMap.get(subject.getId());
+			// if subject has a parent we can proceed otherwise a cluster cannot be formed
+			if (subjectParent != null) {
 				for (HashMap<String, String> claim : subject.getClaims()) {
 					Entity property = entityMap.get(claim.get("property-id"));
 					Entity object = entityMap.get(claim.get("object-id"));
 					if (object != null && property != null) {
-						ClusterId clusterId = getClusterKey(subjectType, object, property, objectList);
+						ClusterId clusterId = createClusterId(object, property, objectList);
 						if (clusterId != null) {
 							HashMap<String, Integer> histogram = createHistogram(
 									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
@@ -82,12 +85,18 @@ public class ClusterEntryMap
 									object.getLabel(), relationPhrase, value.f0, subjectPosition, objectPosition,
 									histogram, getBagOfWords(relationPhrase));
 							out.collect(entry);
-						} 
+						}
 					}
 				}
 			}
 		}
 	}
+	/**
+	 * Histogram should not contain neither subject phrase nor object phrase
+	 * histogram: word -> word count
+	 * @param text
+	 * @return histogram
+	 */
 
 	public HashMap<String, Integer> createHistogram(String text) {
 		text = getObjectCleanSentence(text);
@@ -105,7 +114,13 @@ public class ClusterEntryMap
 		}
 		return histogram;
 	}
-
+	
+	
+	/**
+	 * Returns the text snippet between subject and object
+	 * @param words
+	 * @return relationPhrase
+	 */
 	public String getRelationPhrase(List<Word> words) {
 		StringBuilder builder = new StringBuilder();
 		for (int i = subjectPosition + 1; i < objectPosition; i++) {
@@ -143,6 +158,11 @@ public class ClusterEntryMap
 		return buffer.toString();
 	}
 
+	/**
+	 * Removes the object notations and creates the Wikipedia form of the sentence 
+	 * @param text
+	 * @return text
+	 */
 	public String getObjectCleanSentence(String text) {
 		text = text.replaceAll("\\$", "dollar");
 		Pattern pattern = Pattern.compile("\\[\\[.*?\\]\\]");
@@ -174,6 +194,13 @@ public class ClusterEntryMap
 		return !PUNCTUATIONS.contains(text) && !containsOnlyDigits(text);
 	}
 
+	/**
+	 * Returns entity-id -> parent-entity map 
+	 * Entities are mapped if they appear in the sentence
+	 * 
+	 * @param sentenceObjectList
+	 * @return entityParentMap
+	 */
 	public HashMap<String, Entity> getEntityParentMap(List<Word> sentenceObjectList) {
 		List<String> entityIdList = new ArrayList<String>();
 		List<String> parentIdList = new ArrayList<String>();
@@ -213,15 +240,26 @@ public class ClusterEntryMap
 		return objectParentMap;
 	}
 
-	private ClusterId getClusterKey(String subjectType, Entity object, Entity property, List<Word> sentenceObjectList) {
-
+	/**
+	 * Creates cluster id if both subject-parent and object-parent are available
+	 * Updates current objectPosition (token position in the sentence) 
+	 * Updates current objectIndexInSentence (which object in the object list)
+	 * 
+	 * @param subjectType
+	 * @param object
+	 * @param property
+	 * @param sentenceObjectList
+	 * @return ClusterId
+	 */
+	public ClusterId createClusterId(Entity object, Entity property, List<Word> sentenceObjectList) {
 		for (int i = 0; i < sentenceObjectList.size(); i++) {
 			Word sentenceObject = sentenceObjectList.get(i);
 			if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
 				Entity objectParent = entityParentMap.get(object.getId());
-				String objectType = getEntityType(objectParent, object);
+				String objectType = getEntityType(objectParent);
 				if (objectType != null) {
 					String relationLabel = Helper.fromLabelToKey(property.getLabel());
+					String subjectType = getEntityType(subjectParent);
 					objectPosition = sentenceObject.getPosition();
 					objectIndexInSentence = i;
 					return new ClusterId(subjectType, objectType, relationLabel, property.getId());
@@ -231,15 +269,26 @@ public class ClusterEntryMap
 		return null;
 	}
 
-	private String getEntityType(Entity parentEntity, Entity entity) {
+	/**
+	 * Returns the formatted label of parent entity which is considered as the type of entity
+	 * 
+	 * @param parentEntity
+	 * @return parentEntityLabel
+	 */
+
+	public String getEntityType(Entity parentEntity) {
 		if (parentEntity != null) {
 			return Helper.fromLabelToKey(parentEntity.getLabel());
-		} else {
-			// App.LOG.info("No parent for object: " + entity.getId());
-			return null;
 		}
+		return null;
 	}
 
+	/**
+	 * Collect all entities of the subject and returns entity-id -> entity map
+	 * 
+	 * @param claimList
+	 * @return entityMap
+	 */
 	public HashMap<String, Entity> collectEntities(List<HashMap<String, String>> claimList) {
 		List<String> idSet = new ArrayList<String>();
 		for (HashMap<String, String> claim : claimList) {
@@ -261,12 +310,20 @@ public class ClusterEntryMap
 		return entityMap;
 	}
 
+	/**
+	 * Returns a word list which consists of objects of the sentence
+	 * 
+	 * @param sentenceItemList
+	 * @return
+	 */
+
 	public List<Word> getObjectList(List<Word> sentenceItemList) {
 		List<Word> objectList = new ArrayList<Word>();
 		for (Word item : sentenceItemList) {
 			if (item.getType().equals(Type.OBJECT)) {
-				item.setSurface(App.helper.getObjectEntryLabel(item.getSurface()));
-				objectList.add(item);
+				Word objectWord = new Word(item.getPosition(), App.helper.getObjectEntryLabel(item.getSurface()),
+						Type.OBJECT);
+				objectList.add(objectWord);
 			} else if (item.getType().equals(Type.SUBJECT)) {
 				subjectPosition = item.getPosition();
 			}
@@ -274,12 +331,24 @@ public class ClusterEntryMap
 		return objectList;
 	}
 
+	/**
+	 * Returns bag-of-words representation of a text
+	 * 
+	 * @param text
+	 * @return bagOfWords
+	 */
 	public Set<String> getBagOfWords(String text) {
 		text = text.toLowerCase();
 		Set<String> bagOfWords = Arrays.asList(lemmatize(text).split(" ")).stream().collect(Collectors.toSet());
 		return bagOfWords;
 	}
 
+	/**
+	 * Lemmatizes the words, returns only verbs, nouns and prepositions
+	 * 
+	 * @param documentText
+	 * @return lemmatizedText
+	 */
 	public String lemmatize(String documentText) {
 		StringBuilder builder = new StringBuilder();
 		Annotation document = new Annotation(documentText);
@@ -290,7 +359,7 @@ public class ClusterEntryMap
 				String tag = token.get(PartOfSpeechAnnotation.class);
 				if (tag.startsWith("VB") || tag.startsWith("NN") || tag.startsWith("IN")) {
 					String image = token.get(LemmaAnnotation.class);
-					image = replaceParantheses(image);
+					image = replaceBrackets(image);
 					builder.append(image + " ");
 				}
 			}
@@ -298,11 +367,20 @@ public class ClusterEntryMap
 		return builder.toString().trim();
 	}
 
-	public String replaceParantheses(String image) {
-		return image = image.replaceAll("-lrb-", "\\(").replaceAll("-rrb-", "\\)").replaceAll("-lcb-", "\\{")
+	/**
+	 * Replaces Penn TreeBank bracket codes with the actual characters
+	 * 
+	 * @param text
+	 * @return text
+	 */
+	public String replaceBrackets(String text) {
+		return text = text.replaceAll("-lrb-", "\\(").replaceAll("-rrb-", "\\)").replaceAll("-lcb-", "\\{")
 				.replaceAll("-rcb-", "\\}").replaceAll("-lsb-", "\\[").replaceAll("-rsb-", "\\]");
 	}
 
+	/**
+	 * Initializes the global variables
+	 */
 	@Override
 	public void open(Configuration parameters) {
 		subjectPosition = -1;
