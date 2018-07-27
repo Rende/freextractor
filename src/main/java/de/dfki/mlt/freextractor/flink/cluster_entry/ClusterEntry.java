@@ -27,6 +27,8 @@ public class ClusterEntry implements Serializable {
 	private Integer objectPosition;
 	private HashMap<String, Integer> histogram;
 	private Set<String> bagOfWords;
+	private String clusterEntryId;
+	private Boolean isClusterMember;
 
 	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName,
 			String relationPhrase, Integer pageId, Integer subjectPosition, Integer objectPosition,
@@ -42,6 +44,15 @@ public class ClusterEntry implements Serializable {
 		this.objectPosition = objectPosition;
 		this.histogram = histogram;
 		this.bagOfWords = bagOfWords;
+		this.clusterEntryId = generateClusterEntryId(subjectName, objectName, id);
+		this.isClusterMember = false;
+	}
+
+	private String generateClusterEntryId(String subjName, String objName, ClusterId clusterId) {
+		String sName = subjName.toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
+		String oName = objName.toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
+		String relation = clusterId.getRelationLabel().toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
+		return sName + "_" + oName + "_" + relation;
 	}
 
 	public String getTokenizedSentence() {
@@ -122,5 +133,13 @@ public class ClusterEntry implements Serializable {
 
 	public void setBagOfWords(Set<String> bagOfWords) {
 		this.bagOfWords = bagOfWords;
+	}
+
+	public String getClusterEntryId() {
+		return clusterEntryId;
+	}
+
+	public Boolean getIsClusterMember() {
+		return isClusterMember;
 	}
 }

@@ -123,15 +123,15 @@ public class ElasticsearchService {
 				.startObject("subj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
-				.startObject("relation-id").field("type", "keyword").endObject().startObject("cluster-id")
-				.field("type", "keyword").field("index", "true").endObject().startObject("subj-name")
-				.field("type", "keyword").endObject().startObject("obj-name").field("type", "keyword").endObject()
-				.startObject("relation-phrase").field("type", "keyword").endObject().startObject("tok-sent")
-				.field("type", "text").endObject().startObject("page-id").field("type", "integer").endObject()
-				.startObject("subj-pos").field("type", "integer").endObject().startObject("obj-pos")
-				.field("type", "integer").endObject().startObject("words").startObject("properties").startObject("word")
-				.field("type", "keyword").endObject().startObject("count").field("type", "integer").endObject()
-				.endObject().endObject().endObject() // properties
+				.startObject("is-cluster-member").field("type", "boolean").endObject().startObject("relation-id")
+				.field("type", "keyword").endObject().startObject("cluster-id").field("type", "keyword")
+				.field("index", "true").endObject().startObject("subj-name").field("type", "keyword").endObject()
+				.startObject("obj-name").field("type", "keyword").endObject().startObject("relation-phrase")
+				.field("type", "keyword").endObject().startObject("tok-sent").field("type", "text").endObject()
+				.startObject("page-id").field("type", "integer").endObject().startObject("subj-pos")
+				.field("type", "integer").endObject().startObject("obj-pos").field("type", "integer").endObject()
+				.startObject("words").startObject("properties").startObject("word").field("type", "keyword").endObject()
+				.startObject("count").field("type", "integer").endObject().endObject().endObject().endObject() // properties
 				.endObject() // documentType
 				.endObject();
 
@@ -187,7 +187,9 @@ public class ElasticsearchService {
 		String type = hit.getSource().get("type").toString();
 		String label = hit.getSource().get("label").toString();
 		String tokLabel = hit.getSource().get("tok-label").toString();
-		String wikiTitle = hit.getSource().get("wiki-title").toString();
+		String wikiTitle = "";
+		if (hit.getSource().containsKey("wiki-title"))
+			wikiTitle = hit.getSource().get("wiki-title").toString();
 		List<String> aliases = (ArrayList<String>) hit.getSource().get("aliases");
 		List<String> tokAliases = (ArrayList<String>) hit.getSource().get("tok-aliases");
 		List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) hit.getSource().get("claims");

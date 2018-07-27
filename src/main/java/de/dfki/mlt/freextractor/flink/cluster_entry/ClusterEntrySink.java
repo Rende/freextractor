@@ -33,17 +33,14 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 				.field("subj-type", clusterEntry.getClusterId().getSubjectType())
 				.field("obj-type", clusterEntry.getClusterId().getObjectType())
 				.field("relation", clusterEntry.getClusterId().getRelationLabel())
+				.field("is-cluster-member", clusterEntry.getIsClusterMember())
 				.field("relation-id", clusterEntry.getClusterId().getRelationId())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
-				.field("subj-name", clusterEntry.getSubjectName())
-				.field("obj-name", clusterEntry.getObjectName())
+				.field("subj-name", clusterEntry.getSubjectName()).field("obj-name", clusterEntry.getObjectName())
 				.field("relation-phrase", clusterEntry.getRelationPhrase())
-				.field("tok-sent", clusterEntry.getTokenizedSentence())
-				.field("page-id", clusterEntry.getPageId())
-				.field("subj-pos", clusterEntry.getSubjectPosition())
-				.field("obj-pos", clusterEntry.getObjectPosition())
-				.field("relation-phrase-bow", clusterEntry.getBagOfWords())
-				.startArray("words");
+				.field("tok-sent", clusterEntry.getTokenizedSentence()).field("page-id", clusterEntry.getPageId())
+				.field("subj-pos", clusterEntry.getSubjectPosition()).field("obj-pos", clusterEntry.getObjectPosition())
+				.field("relation-phrase-bow", clusterEntry.getBagOfWords()).startArray("words");
 
 		for (Map.Entry<String, Integer> entry : clusterEntry.getHistogram().entrySet()) {
 			builder.startObject().field("word", entry.getKey()).field("count", entry.getValue()).endObject();
@@ -52,7 +49,8 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 		String json = builder.string();
 		IndexRequest indexRequest = Requests.indexRequest()
 				.index(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).source(json);
+				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).id(clusterEntry.getClusterEntryId())
+				.source(json);
 
 		return indexRequest;
 	}
