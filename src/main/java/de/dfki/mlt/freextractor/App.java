@@ -2,7 +2,6 @@ package de.dfki.mlt.freextractor;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.tuple.Tuple5;
-import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.elasticsearch5.ElasticsearchSink;
@@ -15,6 +14,7 @@ import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
 import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
 import de.dfki.mlt.freextractor.flink.kmeans.KMeansMap;
+import de.dfki.mlt.freextractor.flink.kmeans.KMeansSink;
 import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
 import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
@@ -98,7 +98,9 @@ public class App {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(5);
 		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
-		stream.flatMap(new KMeansMap()).writeAsText("results/positivePoints", WriteMode.OVERWRITE);
+		stream.flatMap(new KMeansMap()).addSink(new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
+				ElasticsearchService.getTransportAddresses(), new KMeansSink()));
+		// .writeAsText("results/positivePoints", WriteMode.OVERWRITE);
 
 		JobExecutionResult result = env.execute("kmeansClusteringApp");
 		return result.isJobExecutionResult();

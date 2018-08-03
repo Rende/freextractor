@@ -54,9 +54,13 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 
 		String clusterInOneString = countPhrases(clusterName);
 		writeTuples(clusterName, clusterInOneString);
-		double[][] dataMatrix = createDataMatrix();
-		List<Cluster> clusterList = applyKMeans(dataMatrix);
+		List<Point> points = getPoints();
+		// for (Point point : points) {
+		// System.out.println(point.getLabel() + " " + point.getArray());
+		// }
+		List<Cluster> clusterList = applyKMeans(points);
 		printClusters(clusterName, clusterList);
+
 		Set<Integer> positiveClusters = new HashSet<Integer>();
 		for (int i = 0; i < clusterList.size(); i++) {
 			Cluster cluster = clusterList.get(i);
@@ -71,7 +75,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 			Cluster cluster = clusterList.get(clusId);
 			for (Point point : cluster.getPoints()) {
 				if (!point.getLabel().startsWith("@")) {
-					out.collect(new Tuple2<String, String>(clusterName, point.getLabel()));
+					out.collect(new Tuple2<String, String>(clusterName, point.getId()));
 				}
 			}
 		}
@@ -93,7 +97,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 		StringBuilder builder = new StringBuilder();
 		boolean aliasesInserted = false;
 		Set<String> insertedAliases = new HashSet<String>();
-		int clusCount = 0;
+		// int clusCount = 0;
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
 				String relationId = hit.getSource().get("relation-id").toString();
@@ -101,7 +105,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 					Entity relation = App.esService.getEntity(relationId);
 					for (String tokAlias : relation.getTokAliases()) {
 						if (!tokAlias.isEmpty()) {
-							clusCount++;
+							// clusCount++;
 							String sAlias = "@" + tokAlias.toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
 							if (!insertedAliases.contains(sAlias)) {
 								String[] phrases = tokAlias.split(" ");
@@ -120,7 +124,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 			response = App.esService.getClient().prepareSearchScroll(response.getScrollId())
 					.setScroll(new TimeValue(60000)).execute().actionGet();
 		} while (response.getHits().getHits().length != 0);
-		clusterCount = clusCount;
+		// clusterCount = clusCount;
 		return builder.toString();
 	}
 
@@ -137,33 +141,46 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 					featureCount++;
 				}
 				builder.append(sampleName + "," + currentRow + "," + phrase + "," + currentFeature + "\n");
-				tupleList.add(sampleName + "," + currentFeature);
+				tupleList.add(sampleName + "," + currentRow + "," + currentFeature);
 			}
 		}
 		return builder.toString();
 	}
 
-	private double[][] createDataMatrix() {
-		double[][] dataMatrix = new double[tupleList.size()][featureCount];
-		for (int row = 0; row < tupleList.size(); row++) {
-			String[] fields = tupleList.get(row).split(cvsSplitBy);
-			int col = Integer.parseInt(fields[1]);
-			dataMatrix[row][col] = 1.0;
+	private List<Point> getPoints() {
+		int prevRow = 0;
+		String prevName = "";
+		List<Point> points = new ArrayList<>();
+		double[] vector = new double[featureCount];
+		for (int i = 0; i < tupleList.size(); i++) {
+			String tuple = tupleList.get(i);
+			String[] fields = tuple.split(cvsSplitBy);
+			int row = Integer.parseInt(fields[1]);
+			int col = Integer.parseInt(fields[2]);
+			if (prevRow == row) {
+				prevName = fields[0];
+			} else {
+				INDArray data = Nd4j.create(vector);
+				Point point = new Point(data);
+				point.setLabel(prevName);
+				point.setId(prevName);
+				points.add(point);
+				prevRow = row;
+				vector = new double[featureCount];
+			}
+			vector[col] = 1.0;
+			if (i == tupleList.size() - 1) {
+				INDArray data = Nd4j.create(vector);
+				Point point = new Point(data);
+				point.setLabel(prevName);
+				points.add(point);
+			}
 		}
-		return dataMatrix;
+		return points;
 	}
 
-	private List<Cluster> applyKMeans(double[][] dataMatrix) throws IOException {
+	private List<Cluster> applyKMeans(List<Point> points) throws IOException {
 
-		INDArray data = Nd4j.create(dataMatrix);
-		List<Point> points = new ArrayList<>();
-		for (int i = 0; i < data.rows(); i++) {
-			Point point = new Point(data.getRow(i));
-			String label = tupleList.get(i).split(cvsSplitBy)[0];
-			point.setLabel(label);
-			point.setId(label);
-			points.add(point);
-		}
 		int maxIterationCount = 10;
 		String distanceFunction = "cosinesimilarity";
 		KMeansClustering kmc = KMeansClustering.setup(clusterCount, maxIterationCount, distanceFunction);
@@ -175,7 +192,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 	}
 
 	private void printClusters(String clusterName, List<Cluster> clusterList) throws IOException {
-		String clustersFile = workingDirectory + clusterName + "_tuples.csv";
+		String clustersFile = workingDirectory + clusterName + "_clusters.txt";
 		FileWriter fw = new FileWriter(clustersFile);
 		BufferedWriter bw = new BufferedWriter(fw);
 

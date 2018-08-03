@@ -30,8 +30,7 @@ public class ClusterIdDataSource implements SourceFunction<String> {
 		while (isRunning) {
 			Collection<Terms.Bucket> buckets = App.esService.getClusters();
 			for (Bucket bucket : buckets) {
-				if (bucket.getDocCount() >= Config.getInstance().getInt(
-						Config.MIN_CLUSTER_SIZE)) {
+				if (bucket.getDocCount() >= Config.getInstance().getInt(Config.MIN_CLUSTER_SIZE)) {
 					ctx.collect(bucket.getKeyAsString());
 				}
 			}
