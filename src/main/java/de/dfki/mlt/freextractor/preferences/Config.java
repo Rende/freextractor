@@ -26,11 +26,8 @@ public final class Config {
 	public static final String WIKIPEDIA_RELATION = "wikipedia.relation.type";
 	public static final String TERM = "term.type";
 	public static final String CLUSTER_ENTRY = "cluster.entry.type";
-	public static final String WIKIPEDIA_EXTENSION = "wikipedia.extension";
 	public static final String NUMBER_OF_SHARDS = "number_of_shards";
 	public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
-	public static final String RELEX_MODE = "relex.mode";
-	public static final String CLUSTER_MODE = "cluster.mode";
 	public static final String MIN_CLUSTER_SIZE = "cluster.size.min";
 	public static final String SCROLL_SIZE = "scroll.size";
 
