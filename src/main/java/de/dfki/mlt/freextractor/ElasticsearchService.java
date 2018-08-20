@@ -233,7 +233,7 @@ public class ElasticsearchService {
 	}
 
 	public Collection<Terms.Bucket> getClusters() {
-		SearchResponse response = App.esService.getClient()
+		SearchResponse response = getClient()
 				.prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY)).setQuery(QueryBuilders.matchAllQuery())
 				.addAggregation(AggregationBuilders.terms("clusters").field("cluster-id").size(Integer.MAX_VALUE))
@@ -255,7 +255,7 @@ public class ElasticsearchService {
 	}
 
 	public SearchResponse getClusterEntryHits(String clusterId) {
-		SearchRequestBuilder builder = App.esService.getClient()
+		SearchRequestBuilder builder = getClient()
 				.prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
 				.setScroll(new TimeValue(60000)).setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
 				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
