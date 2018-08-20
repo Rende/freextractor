@@ -40,26 +40,22 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private static final String cvsSplitBy = ",";
-	private static String workingDirectory = "";
-	private static HashMap<String, Integer> features = new HashMap<>();
-	private static Integer rowCount = 0;
-	private static Integer featureCount = 0;
+	private static final int CLUSTER_COUNT = 10;
+	private static final int MAX_ITERATION_COUNT = 10;
+	private static final String CSV_SPLIT_BY = ",";
+	private static final String DISTANCE_FUNCTION = "cosinesimilarity";
 
-	private int clusterCount = 0;
-	private List<String> tupleList = new ArrayList<String>();
+	private HashMap<String, Integer> features;
+	private List<String> tupleList;
+	private Integer rowCount;
+	private Integer featureCount;
 
 	@Override
 	public void flatMap(String clusterName, Collector<Tuple2<String, String>> out) throws Exception {
 
-		String clusterInOneString = countPhrases(clusterName);
-		writeTuples(clusterName, clusterInOneString);
+		countPhrases(clusterName);
 		List<Point> points = getPoints();
-		// for (Point point : points) {
-		// System.out.println(point.getLabel() + " " + point.getArray());
-		// }
 		List<Cluster> clusterList = applyKMeans(points);
-		printClusters(clusterName, clusterList);
 
 		Set<Integer> positiveClusters = new HashSet<Integer>();
 		for (int i = 0; i < clusterList.size(); i++) {
@@ -83,7 +79,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 
 	private void writeTuples(String clusterName, String clusterInOneString) throws IOException {
 		// prepare the file
-		String tuplesFile = workingDirectory + clusterName + "_tuples.csv";
+		String tuplesFile = clusterName + "_tuples.csv";
 		FileWriter fileWriter = new FileWriter(tuplesFile);
 		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 		bufferedWriter.write("subject-name,subject-id,feature-name,feature");
@@ -154,7 +150,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 		double[] vector = new double[featureCount];
 		for (int i = 0; i < tupleList.size(); i++) {
 			String tuple = tupleList.get(i);
-			String[] fields = tuple.split(cvsSplitBy);
+			String[] fields = tuple.split(CSV_SPLIT_BY);
 			int row = Integer.parseInt(fields[1]);
 			int col = Integer.parseInt(fields[2]);
 			if (prevRow == row) {
@@ -181,9 +177,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 
 	private List<Cluster> applyKMeans(List<Point> points) throws IOException {
 
-		int maxIterationCount = 10;
-		String distanceFunction = "cosinesimilarity";
-		KMeansClustering kmc = KMeansClustering.setup(clusterCount, maxIterationCount, distanceFunction);
+		KMeansClustering kmc = KMeansClustering.setup(CLUSTER_COUNT, MAX_ITERATION_COUNT, DISTANCE_FUNCTION);
 		ClusterSet cs = kmc.applyTo(points);
 		List<Cluster> clusterList = cs.getClusters();
 
@@ -192,7 +186,7 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 	}
 
 	private void printClusters(String clusterName, List<Cluster> clusterList) throws IOException {
-		String clustersFile = workingDirectory + clusterName + "_clusters.txt";
+		String clustersFile = clusterName + "_clusters.txt";
 		FileWriter fw = new FileWriter(clustersFile);
 		BufferedWriter bw = new BufferedWriter(fw);
 
@@ -210,7 +204,9 @@ public class KMeansMap extends RichFlatMapFunction<String, Tuple2<String, String
 
 	@Override
 	public void open(Configuration parameters) {
-		workingDirectory = System.getProperty("user.dir") + "/results/";
-
+		features = new HashMap<>();
+		rowCount = 0;
+		featureCount = 0;
+		tupleList = new ArrayList<String>();
 	}
 }
