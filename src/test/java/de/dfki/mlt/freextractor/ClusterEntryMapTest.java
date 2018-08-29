@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.flink.configuration.Configuration;
 import org.junit.Test;
 
 import de.dfki.mlt.freextractor.flink.Entity;
@@ -26,12 +27,14 @@ import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterId;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusteringMapTest {
+public class ClusterEntryMapTest {
 	private ClusterEntryMap clusteringMap = new ClusterEntryMap();
 	private Helper helper = new Helper();
 
-	public ClusteringMapTest() {
-		clusteringMap.open(null);
+	public ClusterEntryMapTest() {
+		Configuration config = new Configuration();
+		config.setString("lang", "en");
+		clusteringMap.open(config);
 	}
 
 	@Test
@@ -131,7 +134,8 @@ public class ClusteringMapTest {
 		String expectedRelationPhrase = "is a television Christmas special that first aired December on";
 		clusteringMap.subjectPosition = 0;
 		clusteringMap.objectPosition = 13;
-		String actualRelationPhrase = clusteringMap.getRelationPhrase(wordList);
+		List<String> relPhrases = clusteringMap.getRelationPhrases(wordList);
+		String actualRelationPhrase = clusteringMap.getRelationPhraseAsString(relPhrases);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
 	}
 
@@ -142,45 +146,47 @@ public class ClusteringMapTest {
 		String expRelationPhrase = "is the business school of the";
 		clusteringMap.subjectPosition = 0;
 		clusteringMap.objectPosition = 6;
-		String actlRelationPhrase = clusteringMap.getRelationPhrase(words);
+		List<String> relPhrases = clusteringMap.getRelationPhrases(words);
+		String actlRelationPhrase = clusteringMap.getRelationPhraseAsString(relPhrases);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
 		Set<String> bagOfWords = new HashSet<String>();
 		bagOfWords.add("be");
 		bagOfWords.add("business");
 		bagOfWords.add("school");
 		bagOfWords.add("of");
-		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(actlRelationPhrase);
+		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(relPhrases);
 		assertEquals(bagOfWords, actualBagOfWords);
 	}
 
 	@Test
 	public void testGetBagOfWords() {
-		String text = "went to the grocery shop which might be gone to the";
+		List<String> wordList = Arrays.asList("went to the Grocery Shop which might be gone to the".split(" "));
 		Set<String> bagOfWords = new HashSet<String>();
 		bagOfWords.add("go");
 		bagOfWords.add("grocery");
 		bagOfWords.add("shop");
 		bagOfWords.add("be");
-		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(text);
+		Set<String> actualBagOfWords = clusteringMap.getBagOfWords(wordList);
 		assertEquals(bagOfWords, actualBagOfWords);
 
-		String alias = "Norwegian List of Lights ID";
+		List<String> aliasList = Arrays.asList("Norwegian List of Lights ID".split(" "));
 		Set<String> bow = new HashSet<String>();
 		bow.add("list");
 		bow.add("of");
 		bow.add("light");
 		bow.add("id");
-		Set<String> actualBow = clusteringMap.getBagOfWords(alias);
+		Set<String> actualBow = clusteringMap.getBagOfWords(aliasList);
 		assertEquals(bow, actualBow);
 	}
 
 	@Test
 	public void testBagOfWords() {
-		String relationPhrase = "be a television Christmas special that first air December on";
+		List<String> relationPhrases = Arrays
+				.asList("be a television Christmas special that first air December on".split(" "));
 		Set<String> bow = new HashSet<String>();
 		String[] bowArray = { "that", "be", "television", "christmas", "air", "december", "on" };
 		bow.addAll(Arrays.asList(bowArray));
-		Set<String> actualBow = clusteringMap.getBagOfWords(relationPhrase);
+		Set<String> actualBow = clusteringMap.getBagOfWords(relationPhrases);
 		assertEquals(bow, actualBow);
 
 	}
@@ -256,11 +262,12 @@ public class ClusteringMapTest {
 				// for (Entry<String, Integer> hist : histogram.entrySet()) {
 				// System.out.println("Word: " + hist.getKey() + " Count: " + hist.getValue());
 				// }
-				String relationPhrase = clusteringMap.getRelationPhrase(words);
-				System.out.println("Relation Phrase: " + relationPhrase);
-				assertThat(relationPhrase).isEqualTo(expectedRelationPhrases[index]);
-				Set<String> bow = clusteringMap.getBagOfWords(relationPhrase);
-				assertEquals(bow, expectedBows.get(index));
+				List<String> relationPhrases = clusteringMap.getRelationPhrases(words);
+				String relPhraseAsString = clusteringMap.getRelationPhraseAsString(relationPhrases);
+				System.out.println("Relation Phrase: " + relPhraseAsString);
+				assertThat(relPhraseAsString).isEqualTo(expectedRelationPhrases[index]);
+				Set<String> bow = clusteringMap.getBagOfWords(relationPhrases);
+				assertEquals(expectedBows.get(index), bow);
 				index++;
 				System.out.println();
 			}

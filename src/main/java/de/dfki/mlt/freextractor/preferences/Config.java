@@ -30,6 +30,7 @@ public final class Config {
 	public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
 	public static final String MIN_CLUSTER_SIZE = "cluster.size.min";
 	public static final String SCROLL_SIZE = "scroll.size";
+	public static final String LANG = "language";
 
 	private static PropertiesConfiguration config;
 

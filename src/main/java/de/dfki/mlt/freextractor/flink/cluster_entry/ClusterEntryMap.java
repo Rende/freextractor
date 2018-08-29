@@ -3,27 +3,35 @@
  */
 package de.dfki.mlt.freextractor.flink.cluster_entry;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
-import de.dfki.lt.tools.tokenizer.JTok;
 import de.dfki.mlt.freextractor.App;
 import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.flink.Helper;
 import de.dfki.mlt.freextractor.flink.Type;
 import de.dfki.mlt.freextractor.flink.Word;
+import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.munderline.MunderLine;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
@@ -32,6 +40,8 @@ import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
+import opennlp.tools.lemmatizer.LemmatizerME;
+import opennlp.tools.lemmatizer.LemmatizerModel;
 
 /**
  * @author Aydan Rende, DFKI
@@ -46,8 +56,12 @@ public class ClusterEntryMap
 	private static final String INSTANCE_OF_RELATION = "P31";
 	private static final String SUBCLASS_OF_RELATION = "P279";
 	private static final String PUNCTUATIONS = "`.,:;&*!?[['''''']]|=+-/";
-	public JTok jtok;
-	protected StanfordCoreNLP pipeline;
+
+	private StanfordCoreNLP pipeline;
+	private LemmatizerME lemmatizer;
+	private MunderLine munderLine;
+
+	public String lang;
 	public Entity subject;
 	public Entity subjectParent;
 	public HashMap<String, Entity> entityMap;
@@ -62,6 +76,7 @@ public class ClusterEntryMap
 	@Override
 	public void flatMap(Tuple5<Integer, String, String, String, String> value, Collector<ClusterEntry> out)
 			throws Exception {
+		resetGlobals();
 		List<Word> words = App.helper.getWordList(value.f3);
 		List<Word> objectList = getObjectList(words);
 		subject = App.esService.getEntity(value.f1);
@@ -80,10 +95,11 @@ public class ClusterEntryMap
 						if (clusterId != null) {
 							HashMap<String, Integer> histogram = createHistogram(
 									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
-							String relationPhrase = getRelationPhrase(words);
+							List<String> relationPhrases = getRelationPhrases(words);
+							String relPhraseAsString = getRelationPhraseAsString(relationPhrases);
 							ClusterEntry entry = new ClusterEntry(clusterId, value.f4, subject.getLabel(),
-									object.getLabel(), relationPhrase, value.f0, subjectPosition, objectPosition,
-									histogram, getBagOfWords(relationPhrase));
+									object.getLabel(), relPhraseAsString, value.f0, subjectPosition, objectPosition,
+									histogram, getBagOfWords(relationPhrases));
 							out.collect(entry);
 						}
 					}
@@ -91,9 +107,11 @@ public class ClusterEntryMap
 			}
 		}
 	}
+
 	/**
 	 * Histogram should not contain neither subject phrase nor object phrase
 	 * histogram: word -> word count
+	 * 
 	 * @param text
 	 * @return histogram
 	 */
@@ -114,28 +132,35 @@ public class ClusterEntryMap
 		}
 		return histogram;
 	}
-	
-	
+
 	/**
 	 * Returns the text snippet between subject and object
+	 * 
 	 * @param words
 	 * @return relationPhrase
 	 */
-	public String getRelationPhrase(List<Word> words) {
+	public String getRelationPhraseAsString(List<String> relationPhrases) {
 		StringBuilder builder = new StringBuilder();
+		for (String phrase : relationPhrases) {
+			builder.append(phrase + " ");
+		}
+		return builder.toString().trim();
+	}
+
+	public List<String> getRelationPhrases(List<Word> words) {
+		List<String> phrases = new ArrayList<String>();
 		for (int i = subjectPosition + 1; i < objectPosition; i++) {
 			Word word = words.get(i);
 			if (word.getPosition() == i) {
 				if (word.getType() == Type.SUBJECT)
-					// this case is very unlikely
-					builder.append(word.getSurface().replaceAll("'''", "") + " ");
+					phrases.add(word.getSurface().replaceAll("'''", ""));
 				else if (word.getType() == Type.OBJECT)
-					builder.append(App.helper.getCleanObject(word.getSurface()) + " ");
+					phrases.add(App.helper.getCleanObject(word.getSurface()));
 				else if (isTextOnly(word.getSurface()))
-					builder.append(word.getSurface() + " ");
+					phrases.add(word.getSurface());
 			}
 		}
-		return builder.toString().trim();
+		return phrases;
 	}
 
 	public String removeSubject(String text) {
@@ -159,7 +184,8 @@ public class ClusterEntryMap
 	}
 
 	/**
-	 * Removes the object notations and creates the Wikipedia form of the sentence 
+	 * Removes the object notations and creates the Wikipedia form of the sentence
+	 * 
 	 * @param text
 	 * @return text
 	 */
@@ -195,8 +221,8 @@ public class ClusterEntryMap
 	}
 
 	/**
-	 * Returns entity-id -> parent-entity map 
-	 * Entities are mapped if they appear in the sentence
+	 * Returns entity-id -> parent-entity map Entities are mapped if they appear in
+	 * the sentence
 	 * 
 	 * @param sentenceObjectList
 	 * @return entityParentMap
@@ -242,8 +268,8 @@ public class ClusterEntryMap
 
 	/**
 	 * Creates cluster id if both subject-parent and object-parent are available
-	 * Updates current objectPosition (token position in the sentence) 
-	 * Updates current objectIndexInSentence (which object in the object list)
+	 * Updates current objectPosition (token position in the sentence) Updates
+	 * current objectIndexInSentence (which object in the object list)
 	 * 
 	 * @param subjectType
 	 * @param object
@@ -270,7 +296,8 @@ public class ClusterEntryMap
 	}
 
 	/**
-	 * Returns the formatted label of parent entity which is considered as the type of entity
+	 * Returns the formatted label of parent entity which is considered as the type
+	 * of entity
 	 * 
 	 * @param parentEntity
 	 * @return parentEntityLabel
@@ -337,10 +364,82 @@ public class ClusterEntryMap
 	 * @param text
 	 * @return bagOfWords
 	 */
-	public Set<String> getBagOfWords(String text) {
-		text = text.toLowerCase();
-		Set<String> bagOfWords = Arrays.asList(lemmatize(text).split(" ")).stream().collect(Collectors.toSet());
+	public Set<String> getBagOfWords(List<String> relationPhrases) {
+		Set<String> bagOfWords = new HashSet<String>();
+		if (this.lang.equals("en")) {
+			bagOfWords = Arrays.asList(lemmatizeEN(relationPhrases).toLowerCase(Locale.ENGLISH).split(" ")).stream()
+					.collect(Collectors.toSet());
+		} else if (this.lang.equals("de")) {
+			bagOfWords = Arrays.asList(lemmatizeDE(relationPhrases).toLowerCase(Locale.GERMAN).split(" ")).stream()
+					.collect(Collectors.toSet());
+		}
 		return bagOfWords;
+	}
+
+	public String lemmatizeDE(List<String> tokensAsString) {
+		String[][] coNllTable = this.munderLine.processTokenizedSentence(tokensAsString);
+
+		String[] tokens = new String[coNllTable.length];
+		String[] posTags = new String[coNllTable.length];
+		for (int i = 0; i < coNllTable.length; i++) {
+			tokens[i] = coNllTable[i][1];
+			posTags[i] = coNllTable[i][3];
+		}
+		String[] lemmata = this.lemmatizer.lemmatize(tokens, posTags);
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < lemmata.length; i++) {
+			if (checkAliasConditionDE(posTags[i])) {
+				builder.append(lemmata[i] + " ");
+			}
+		}
+		return builder.toString().trim();
+	}
+
+	public String lemmatizeEN(List<String> tokensAsString) {
+		StringBuilder builder = new StringBuilder();
+		Annotation document = null;
+		for (String token : tokensAsString) {
+			document = new Annotation(token);
+			this.pipeline.annotate(document);
+			List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+			for (CoreMap sentence : sentences) {
+				for (CoreLabel coreLabel : sentence.get(TokensAnnotation.class)) {
+					String image = coreLabel.get(LemmaAnnotation.class);
+					String tag = coreLabel.get(PartOfSpeechAnnotation.class);
+					if (checkAliasConditionEN(tag)) {
+						image = replaceParantheses(image).toLowerCase();
+						builder.append(image + " ");
+					}
+				}
+			}
+		}
+		return builder.toString().trim();
+	}
+
+	/**
+	 * Accept only English verbs, nouns and prepositions
+	 * 
+	 * @param tag
+	 * @return
+	 */
+	private boolean checkAliasConditionEN(String tag) {
+		return (tag.startsWith("VB") || tag.startsWith("NN") || tag.startsWith("IN"));
+	}
+
+	/**
+	 * Accept only German (STTS tags) verbs, prepositions, nouns and some particles
+	 * 
+	 * @param tag
+	 * @return
+	 */
+	private boolean checkAliasConditionDE(String tag) {
+		return (tag.startsWith("V") || tag.startsWith("N") || tag.startsWith("APP") || tag.equals("PTKNEG")
+				|| tag.equals("PTKREL") || tag.equals("PTKVZ") || tag.equals("PTKZU"));
+	}
+
+	public String replaceParantheses(String image) {
+		return image = image.replaceAll("-lrb-", "\\(").replaceAll("-rrb-", "\\)").replaceAll("-lcb-", "\\{")
+				.replaceAll("-rcb-", "\\}").replaceAll("-lsb-", "\\[").replaceAll("-rsb-", "\\]");
 	}
 
 	/**
@@ -383,13 +482,48 @@ public class ClusterEntryMap
 	 */
 	@Override
 	public void open(Configuration parameters) {
+		if (parameters.containsKey("lang")) {
+			String lang = parameters.getString("lang", Config.getInstance().getString(Config.LANG));
+			this.lang = lang;
+		} else {
+			this.lang = Config.getInstance().getString(Config.LANG);
+		}
+
+		if (this.lang.equals("en")) {
+			initializeENModuls();
+		} else if (this.lang.equals("de")) {
+			initializeDEModuls();
+		}
+	}
+
+	private void resetGlobals() {
 		subjectPosition = -1;
 		objectPosition = -1;
 		objectIndexInSentence = -1;
+		entityMap = new HashMap<>();
+		entityParentMap = new HashMap<>();
+	}
+
+	private void initializeENModuls() {
 		Properties props;
 		props = new Properties();
 		props.put("annotators", "tokenize, ssplit, pos, lemma");
-		pipeline = new StanfordCoreNLP(props);
+		this.pipeline = new StanfordCoreNLP(props);
 	}
 
+	private void initializeDEModuls() {
+		LemmatizerModel lemmatizerModel = null;
+		try {
+			this.munderLine = new MunderLine("DE_pipeline.conf");
+			String lemmatizerModelPath = "models/DE-lemmatizer.bin";
+			InputStream in = this.getClass().getClassLoader().getResourceAsStream(lemmatizerModelPath);
+			if (null == in) {
+				in = Files.newInputStream(Paths.get(lemmatizerModelPath));
+			}
+			lemmatizerModel = new LemmatizerModel(in);
+		} catch (ConfigurationException | IOException e) {
+			e.printStackTrace();
+		}
+		this.lemmatizer = new LemmatizerME(lemmatizerModel);
+	}
 }
