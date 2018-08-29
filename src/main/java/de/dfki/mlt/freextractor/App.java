@@ -13,8 +13,6 @@ import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntry;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
 import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
 import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
-import de.dfki.mlt.freextractor.flink.kmeans.KMeansMap;
-import de.dfki.mlt.freextractor.flink.kmeans.KMeansSink;
 import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
 import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
@@ -35,10 +33,9 @@ public class App {
 
 	public static void main(String[] args) throws Exception {
 
-		// sentenceProcessingApp();
+		sentenceProcessingApp();
 		// termCountingApp();
 		// docCountingApp();
-		kmeansClusteringApp();
 
 	}
 
@@ -51,7 +48,7 @@ public class App {
 	 */
 	public static boolean sentenceProcessingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(28);
+		env.setParallelism(10);
 		esService.checkAndCreateIndex(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX));
 		esService.putMappingForClusterEntry();
 		DataStream<Tuple5<Integer, String, String, String, String>> stream = env.addSource(new SentenceDataSource());
@@ -91,18 +88,6 @@ public class App {
 		env.addSource(new TermDataSource()).flatMap(new DocCountingMap()).addSink(new ElasticsearchSink<>(
 				ElasticsearchService.getUserConfig(), ElasticsearchService.getTransportAddresses(), new TfIdfSink()));
 		JobExecutionResult result = env.execute("docCountingApp");
-		return result.isJobExecutionResult();
-	}
-
-	public static boolean kmeansClusteringApp() throws Exception {
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(5);
-		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
-		stream.flatMap(new KMeansMap()).addSink(new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-				ElasticsearchService.getTransportAddresses(), new KMeansSink()));
-		// .writeAsText("results/positivePoints", WriteMode.OVERWRITE);
-
-		JobExecutionResult result = env.execute("kmeansClusteringApp");
 		return result.isJobExecutionResult();
 	}
 
