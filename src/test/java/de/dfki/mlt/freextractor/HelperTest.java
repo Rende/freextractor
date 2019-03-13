@@ -12,13 +12,14 @@ import de.dfki.mlt.freextractor.flink.Word;
 
 public class HelperTest {
 	private Helper helper = new Helper();
+	private String lang = "en";
 
 	@Test
 	public void testGetWordList() {
 		String test = "''' Saint-Esteben ''' be a [[ commune of France | commune ]] in "
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
-		List<Word> actualList = helper.getWordList(test);
+		List<Word> actualList = helper.getWordList(test, this.lang);
 		assertThat(actualList).extracting("position").containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 		assertThat(actualList).extracting("surface").containsExactly("''' Saint-Esteben '''", "be", "a",
 				"[[ commune of France | commune ]]", "in", "the", "[[ pyrénées-atlantique ]]",

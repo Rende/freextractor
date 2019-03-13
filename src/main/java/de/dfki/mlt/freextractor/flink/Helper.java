@@ -44,9 +44,9 @@ public class Helper {
 	 * Returns the list of objects. Subject: ''' abc ''' = single token. object: [[
 	 * abc ]] = single token. The positions are counted based on this schema.
 	 **/
-	public List<Word> getWordList(String text) {
+	public List<Word> getWordList(String text, String lang) {
 		List<Word> words = new ArrayList<Word>();
-		AnnotatedString annotatedString = jtok.tokenize(text, "en");
+		AnnotatedString annotatedString = jtok.tokenize(text, lang);
 		List<Token> tokens = Outputter.createTokens(annotatedString);
 
 		int index = 0;
