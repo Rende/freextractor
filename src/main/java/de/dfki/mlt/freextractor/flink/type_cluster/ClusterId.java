@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.cluster_entry;
+package de.dfki.mlt.freextractor.flink.type_cluster;
 
 import java.io.Serializable;
 

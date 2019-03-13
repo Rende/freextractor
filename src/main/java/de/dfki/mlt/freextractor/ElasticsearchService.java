@@ -41,7 +41,6 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
-import de.dfki.mlt.freextractor.flink.Entity;
 import de.dfki.mlt.freextractor.preferences.Config;
 
 /**
@@ -120,7 +119,7 @@ public class ElasticsearchService {
 	public boolean putMappingForClusterEntry() throws IOException {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
 		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
-				.startObject(Config.getInstance().getString(Config.CLUSTER_ENTRY)).startObject("properties")
+				.startObject(Config.getInstance().getString(Config.CLUSTER_MEMBER)).startObject("properties")
 				.startObject("subj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
@@ -141,8 +140,8 @@ public class ElasticsearchService {
 
 		App.LOG.debug("Mapping for cluster entry: " + mappingBuilder.string());
 		PutMappingResponse putMappingResponse = indicesAdminClient
-				.preparePutMapping(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.setType(Config.getInstance().getString(Config.CLUSTER_ENTRY)).setSource(mappingBuilder).execute()
+				.preparePutMapping(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
+				.setType(Config.getInstance().getString(Config.CLUSTER_MEMBER)).setSource(mappingBuilder).execute()
 				.actionGet();
 
 		return putMappingResponse.isAcknowledged();
@@ -232,8 +231,8 @@ public class ElasticsearchService {
 	}
 
 	public Collection<Terms.Bucket> getClusters() {
-		SearchResponse response = getClient().prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY)).setQuery(QueryBuilders.matchAllQuery())
+		SearchResponse response = getClient().prepareSearch(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
+				.setTypes(Config.getInstance().getString(Config.CLUSTER_MEMBER)).setQuery(QueryBuilders.matchAllQuery())
 				.addAggregation(AggregationBuilders.terms("clusters").field("cluster-id").size(Integer.MAX_VALUE))
 				.setFetchSource(true).setExplain(false).execute().actionGet();
 
@@ -254,8 +253,8 @@ public class ElasticsearchService {
 
 	public SearchResponse getClusterEntryHits(String clusterId) {
 		SearchRequestBuilder builder = getClient()
-				.prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.setScroll(new TimeValue(60000)).setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY))
+				.prepareSearch(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
+				.setScroll(new TimeValue(60000)).setTypes(Config.getInstance().getString(Config.CLUSTER_MEMBER))
 				.setQuery(QueryBuilders.matchQuery("cluster-id", clusterId));
 		System.out.println(builder.toString());
 		SearchResponse response = builder.setSize(Config.getInstance().getInt(Config.SCROLL_SIZE)).execute()

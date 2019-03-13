@@ -10,17 +10,16 @@ import org.apache.flink.streaming.connectors.elasticsearch5.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntry;
-import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
-import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntrySink;
-import de.dfki.mlt.freextractor.flink.cluster_entry.SentenceDataSource;
 import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
 import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
 import de.dfki.mlt.freextractor.flink.term.TermDataSource;
 import de.dfki.mlt.freextractor.flink.term.TermSink;
 import de.dfki.mlt.freextractor.flink.term.TfIdfSink;
+import de.dfki.mlt.freextractor.flink.type_cluster.SentenceDataSource;
+import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMap;
+import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMember;
+import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterSink;
 import de.dfki.mlt.freextractor.preferences.Config;
 
 /**
@@ -51,12 +50,12 @@ public class App {
 	public static boolean sentenceProcessingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(10);
-		esService.checkAndCreateIndex(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX));
+		esService.checkAndCreateIndex(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX));
 		esService.putMappingForClusterEntry();
 		DataStream<Tuple5<Integer, List<String>, String, String, String>> stream = env.addSource(new SentenceDataSource());
-		stream.flatMap(new ClusterEntryMap())
-				.addSink(new ElasticsearchSink<ClusterEntry>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(), new ClusterEntrySink()));
+		stream.flatMap(new TypeClusterMap())
+				.addSink(new ElasticsearchSink<TypeClusterMember>(ElasticsearchService.getUserConfig(),
+						ElasticsearchService.getTransportAddresses(), new TypeClusterSink()));
 		JobExecutionResult result = env.execute("SentenceProcessingApp");
 		return result.isJobExecutionResult();
 	}

@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ public class Helper {
 			} else if (token.getImage().contains("'''") && isSubject) {
 				isSubject = false;
 				builder = append(builder, token);
-				words.add(new Word(index, builder.toString().trim(), Type.SUBJECT));
+				words.add(new Word(index, builder.toString().trim(), WordType.SUBJECT));
 				index++;
 			} else if (isSubject) {
 				builder = append(builder, token);
@@ -69,13 +69,13 @@ public class Helper {
 				inBracket = true;
 			} else if (token.getType().equals("CCROCHE") && inBracket) {
 				builder = append(builder, token);
-				words.add(new Word(index, builder.toString().trim(), Type.OBJECT));
+				words.add(new Word(index, builder.toString().trim(), WordType.OBJECT));
 				inBracket = false;
 				index++;
 			} else if (inBracket) {
 				builder = append(builder, token);
 			} else {
-				words.add(new Word(index, token.getImage(), Type.OTHER));
+				words.add(new Word(index, token.getImage(), WordType.OTHER));
 				index++;
 			}
 		}

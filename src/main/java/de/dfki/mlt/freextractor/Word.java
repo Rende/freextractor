@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink;
+package de.dfki.mlt.freextractor;
 
 /**
  * @author Aydan Rende, DFKI
@@ -10,9 +10,9 @@ package de.dfki.mlt.freextractor.flink;
 public class Word {
 	private int position;
 	private String surface;
-	private Type type;
+	private WordType type;
 
-	public Word(int position, String surface, Type type) {
+	public Word(int position, String surface, WordType type) {
 		this.position = position;
 		this.surface = surface;
 		this.type = type;
@@ -34,11 +34,11 @@ public class Word {
 		this.surface = surface;
 	}
 
-	public Type getType() {
+	public WordType getType() {
 		return type;
 	}
 
-	public void setType(Type type) {
+	public void setType(WordType type) {
 		this.type = type;
 	}
 

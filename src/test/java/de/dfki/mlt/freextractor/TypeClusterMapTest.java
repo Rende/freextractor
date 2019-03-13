@@ -17,22 +17,19 @@ import java.util.Set;
 import org.apache.flink.configuration.Configuration;
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.Entity;
-import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.Word;
-import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterEntryMap;
-import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterId;
+import de.dfki.mlt.freextractor.flink.type_cluster.ClusterId;
+import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMap;
 
 /**
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntryMapTest {
-	private ClusterEntryMap clusteringMap = new ClusterEntryMap();
+public class TypeClusterMapTest {
+	private TypeClusterMap clusteringMap = new TypeClusterMap();
 	private Helper helper = new Helper();
 	private String lang;
 
-	public ClusterEntryMapTest() {
+	public TypeClusterMapTest() {
 		Configuration config = new Configuration();
 		config.setString("lang", "en");
 		lang = "en";

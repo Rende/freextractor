@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.cluster_entry;
+package de.dfki.mlt.freextractor.flink.type_cluster;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,10 +26,10 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
 import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.flink.Entity;
-import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.Type;
-import de.dfki.mlt.freextractor.flink.Word;
+import de.dfki.mlt.freextractor.Entity;
+import de.dfki.mlt.freextractor.Helper;
+import de.dfki.mlt.freextractor.Word;
+import de.dfki.mlt.freextractor.WordType;
 import de.dfki.mlt.freextractor.preferences.Config;
 import de.dfki.mlt.munderline.MunderLine;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
@@ -47,8 +47,8 @@ import opennlp.tools.lemmatizer.LemmatizerModel;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntryMap
-		extends RichFlatMapFunction<Tuple5<Integer, List<String>, String, String, String>, ClusterEntry> {
+public class TypeClusterMap
+		extends RichFlatMapFunction<Tuple5<Integer, List<String>, String, String, String>, TypeClusterMember> {
 	/**
 	 *
 	 */
@@ -70,7 +70,7 @@ public class ClusterEntryMap
 
 	// pageId, candidateSubjectIds, title, sentence, lemmatizedSentence
 	@Override
-	public void flatMap(Tuple5<Integer, List<String>, String, String, String> value, Collector<ClusterEntry> out)
+	public void flatMap(Tuple5<Integer, List<String>, String, String, String> value, Collector<TypeClusterMember> out)
 			throws Exception {
 		List<Word> words = App.helper.getWordList(value.f3, this.lang);
 		List<Word> objectList = getObjectList(words);
@@ -98,7 +98,7 @@ public class ClusterEntryMap
 						removeObjectByIndex(tokenizedSentence, objectIndex));
 				List<String> relationPhrases = getRelationPhrases(words);
 				String relPhraseAsString = getRelationPhraseAsString(relationPhrases);
-				ClusterEntry entry = new ClusterEntry(clusterId, value.f3, value.f4, subject.getLabels().get(this.lang),
+				TypeClusterMember entry = new TypeClusterMember(clusterId, value.f3, value.f4, subject.getLabels().get(this.lang),
 						subject.getId(), object.getLabels().get(this.lang), object.getId(), property.getId(),
 						relPhraseAsString, value.f0, this.subjectPos, this.objectPos, histogram,
 						getBagOfWords(relationPhrases));
@@ -151,9 +151,9 @@ public class ClusterEntryMap
 		for (int i = this.subjectPos + 1; i < this.objectPos; i++) {
 			Word word = words.get(i);
 			if (word.getPosition() == i) {
-				if (word.getType() == Type.SUBJECT)
+				if (word.getType() == WordType.SUBJECT)
 					phrases.add(word.getSurface().replaceAll("'''", ""));
-				else if (word.getType() == Type.OBJECT)
+				else if (word.getType() == WordType.OBJECT)
 					phrases.add(App.helper.getCleanObject(word.getSurface()));
 				else if (isTextOnly(word.getSurface()))
 					phrases.add(word.getSurface());
@@ -338,11 +338,11 @@ public class ClusterEntryMap
 	public List<Word> getObjectList(List<Word> sentenceItemList) {
 		List<Word> objectList = new ArrayList<Word>();
 		for (Word item : sentenceItemList) {
-			if (item.getType().equals(Type.OBJECT)) {
+			if (item.getType().equals(WordType.OBJECT)) {
 				Word objectWord = new Word(item.getPosition(), App.helper.getObjectEntryLabel(item.getSurface()),
-						Type.OBJECT);
+						WordType.OBJECT);
 				objectList.add(objectWord);
-			} else if (item.getType().equals(Type.SUBJECT)) {
+			} else if (item.getType().equals(WordType.SUBJECT)) {
 				subjectPos = item.getPosition();
 			}
 		}

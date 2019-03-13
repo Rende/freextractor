@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.cluster_entry;
+package de.dfki.mlt.freextractor.flink.type_cluster;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -11,7 +11,7 @@ import java.util.Set;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntry implements Serializable {
+public class TypeClusterMember implements Serializable {
 
 	/**
 	 * 
@@ -33,7 +33,7 @@ public class ClusterEntry implements Serializable {
 	private Set<String> bagOfWords;
 	private Boolean isClusterMember;
 
-	public ClusterEntry(ClusterId id,String sentence, String tokenizedSentence, String subjectName, String subjectId, String objectName,
+	public TypeClusterMember(ClusterId id,String sentence, String tokenizedSentence, String subjectName, String subjectId, String objectName,
 			String objectId, String relationId, String relationPhrase, Integer pageId, Integer subjectPosition,
 			Integer objectPosition, HashMap<String, Integer> histogram, Set<String> bagOfWords) {
 

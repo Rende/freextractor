@@ -19,11 +19,11 @@ public final class Config {
 	public static final String WIKIDATA_INDEX = "wikidata.index";
 	public static final String WIKIDATA_ENTITY = "wikidata.entity.type";
 	public static final String WIKIPEDIA_SENTENCE_INDEX = "wikipedia.sentence.index";
-	public static final String CLUSTER_ENTRY_INDEX = "cluster.entry.index";
+	public static final String TYPE_CLUSTER_INDEX = "type.cluster.index";
 	public static final String TERM_INDEX = "term.index";
 	public static final String WIKIPEDIA_SENTENCE = "wikipedia.sentence.type";
 	public static final String TERM = "term.type";
-	public static final String CLUSTER_ENTRY = "cluster.entry.type";
+	public static final String CLUSTER_MEMBER = "type.cluster.type";
 	public static final String NUMBER_OF_SHARDS = "number_of_shards";
 	public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
 	public static final String MIN_CLUSTER_SIZE = "cluster.size.min";

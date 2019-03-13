@@ -6,10 +6,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.Helper;
-import de.dfki.mlt.freextractor.flink.Type;
-import de.dfki.mlt.freextractor.flink.Word;
-
 public class HelperTest {
 	private Helper helper = new Helper();
 	private String lang = "en";
@@ -24,8 +20,8 @@ public class HelperTest {
 		assertThat(actualList).extracting("surface").containsExactly("''' Saint-Esteben '''", "be", "a",
 				"[[ commune of France | commune ]]", "in", "the", "[[ pyrénées-atlantique ]]",
 				"[[ Departments of France | department ]]", "in", "south-western", "[[ France ]]", ".");
-		assertThat(actualList).extracting("type").containsExactly(Type.SUBJECT, Type.OTHER, Type.OTHER, Type.OBJECT,
-				Type.OTHER, Type.OTHER, Type.OBJECT, Type.OBJECT, Type.OTHER, Type.OTHER, Type.OBJECT, Type.OTHER);
+		assertThat(actualList).extracting("type").containsExactly(WordType.SUBJECT, WordType.OTHER, WordType.OTHER, WordType.OBJECT,
+				WordType.OTHER, WordType.OTHER, WordType.OBJECT, WordType.OBJECT, WordType.OTHER, WordType.OTHER, WordType.OBJECT, WordType.OTHER);
 	}
 
 	@Test

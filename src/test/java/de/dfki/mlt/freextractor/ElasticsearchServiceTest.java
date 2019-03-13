@@ -11,8 +11,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.Entity;
-
 /**
  * @author Aydan Rende, DFKI
  *

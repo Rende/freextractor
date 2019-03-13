@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.cluster_entry;
+package de.dfki.mlt.freextractor.flink.type_cluster;
 
 import java.io.IOException;
 import java.util.Map;
@@ -21,13 +21,13 @@ import de.dfki.mlt.freextractor.preferences.Config;
  * @author Aydan Rende, DFKI
  *
  */
-public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry> {
+public class TypeClusterSink implements ElasticsearchSinkFunction<TypeClusterMember> {
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public IndexRequest createIndexRequest(ClusterEntry clusterEntry) throws IOException {
+	public IndexRequest createIndexRequest(TypeClusterMember clusterEntry) throws IOException {
 
 		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
 				.field("subj-type", clusterEntry.getClusterId().getSubjectType())
@@ -54,14 +54,14 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 		builder.endArray().endObject();
 		String json = builder.string();
 		IndexRequest indexRequest = Requests.indexRequest()
-				.index(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).source(json);
+				.index(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
+				.type(Config.getInstance().getString(Config.CLUSTER_MEMBER)).source(json);
 
 		return indexRequest;
 	}
 
 	@Override
-	public void process(ClusterEntry entry, RuntimeContext ctx, RequestIndexer indexer) {
+	public void process(TypeClusterMember entry, RuntimeContext ctx, RequestIndexer indexer) {
 		try {
 			indexer.add(createIndexRequest(entry));
 		} catch (IOException e) {
