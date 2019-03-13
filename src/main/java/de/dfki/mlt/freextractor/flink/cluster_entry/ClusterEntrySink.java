@@ -36,10 +36,16 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 				.field("is-cluster-member", clusterEntry.getIsClusterMember())
 				.field("relation-id", clusterEntry.getClusterId().getRelationId())
 				.field("cluster-id", clusterEntry.getClusterId().toString())
-				.field("subj-name", clusterEntry.getSubjectName()).field("obj-name", clusterEntry.getObjectName())
+				.field("subj-name", clusterEntry.getSubjectName())
+				.field("subj-id", clusterEntry.getSubjectId())
+				.field("obj-name", clusterEntry.getObjectName())
+				.field("obj-id", clusterEntry.getObjectId())
 				.field("relation-phrase", clusterEntry.getRelationPhrase())
-				.field("tok-sent", clusterEntry.getTokenizedSentence()).field("page-id", clusterEntry.getPageId())
-				.field("subj-pos", clusterEntry.getSubjectPosition()).field("obj-pos", clusterEntry.getObjectPosition())
+				.field("sent", clusterEntry.getSentence())
+				.field("lem-sent", clusterEntry.getTokenizedSentence())
+				.field("page-id", clusterEntry.getPageId())
+				.field("subj-pos", clusterEntry.getSubjectPosition())
+				.field("obj-pos", clusterEntry.getObjectPosition())
 				.field("relation-phrase-bow", clusterEntry.getBagOfWords()).startArray("words");
 
 		for (Map.Entry<String, Integer> entry : clusterEntry.getHistogram().entrySet()) {
@@ -49,8 +55,7 @@ public class ClusterEntrySink implements ElasticsearchSinkFunction<ClusterEntry>
 		String json = builder.string();
 		IndexRequest indexRequest = Requests.indexRequest()
 				.index(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
-				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).id(clusterEntry.getClusterEntryId())
-				.source(json);
+				.type(Config.getInstance().getString(Config.CLUSTER_ENTRY)).source(json);
 
 		return indexRequest;
 	}

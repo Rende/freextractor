@@ -1,5 +1,7 @@
 package de.dfki.mlt.freextractor;
 
+import java.util.List;
+
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -51,7 +53,7 @@ public class App {
 		env.setParallelism(10);
 		esService.checkAndCreateIndex(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX));
 		esService.putMappingForClusterEntry();
-		DataStream<Tuple5<Integer, String, String, String, String>> stream = env.addSource(new SentenceDataSource());
+		DataStream<Tuple5<Integer, List<String>, String, String, String>> stream = env.addSource(new SentenceDataSource());
 		stream.flatMap(new ClusterEntryMap())
 				.addSink(new ElasticsearchSink<ClusterEntry>(ElasticsearchService.getUserConfig(),
 						ElasticsearchService.getTransportAddresses(), new ClusterEntrySink()));

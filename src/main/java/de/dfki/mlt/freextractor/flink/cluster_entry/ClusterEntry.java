@@ -18,42 +18,42 @@ public class ClusterEntry implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	private ClusterId clusterId;
+	private String sentence;
 	private String tokenizedSentence;
 	private String subjectName;
+	private String subjectId;
 	private String objectName;
+	private String objectId;
+	private String relationId;
 	private String relationPhrase;
 	private Integer pageId;
 	private Integer subjectPosition;
 	private Integer objectPosition;
 	private HashMap<String, Integer> histogram;
 	private Set<String> bagOfWords;
-	private String clusterEntryId;
 	private Boolean isClusterMember;
 
-	public ClusterEntry(ClusterId id, String tokenizedSentence, String subjectName, String objectName,
-			String relationPhrase, Integer pageId, Integer subjectPosition, Integer objectPosition,
-			HashMap<String, Integer> histogram, Set<String> bagOfWords) {
+	public ClusterEntry(ClusterId id,String sentence, String tokenizedSentence, String subjectName, String subjectId, String objectName,
+			String objectId, String relationId, String relationPhrase, Integer pageId, Integer subjectPosition,
+			Integer objectPosition, HashMap<String, Integer> histogram, Set<String> bagOfWords) {
 
 		this.clusterId = id;
+		this.sentence = sentence;
 		this.tokenizedSentence = tokenizedSentence;
 		this.subjectName = subjectName;
+		this.subjectId = subjectId;
 		this.objectName = objectName;
+		this.objectId = objectId;
+		this.relationId = relationId;
 		this.relationPhrase = relationPhrase;
 		this.pageId = pageId;
 		this.subjectPosition = subjectPosition;
 		this.objectPosition = objectPosition;
 		this.histogram = histogram;
 		this.bagOfWords = bagOfWords;
-		this.clusterEntryId = generateClusterEntryId(subjectName, objectName, id);
 		this.isClusterMember = false;
 	}
 
-	private String generateClusterEntryId(String subjName, String objName, ClusterId clusterId) {
-		String sName = subjName.toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
-		String oName = objName.toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
-		String relation = clusterId.getRelationLabel().toLowerCase().replaceAll(",", "").replaceAll(" ", "_");
-		return sName + "_" + oName + "_" + relation;
-	}
 
 	public String getTokenizedSentence() {
 		return tokenizedSentence;
@@ -135,11 +135,39 @@ public class ClusterEntry implements Serializable {
 		this.bagOfWords = bagOfWords;
 	}
 
-	public String getClusterEntryId() {
-		return clusterEntryId;
-	}
-
 	public Boolean getIsClusterMember() {
 		return isClusterMember;
+	}
+
+	public String getSubjectId() {
+		return subjectId;
+	}
+
+	public void setSubjectId(String subjectId) {
+		this.subjectId = subjectId;
+	}
+
+	public String getObjectId() {
+		return objectId;
+	}
+
+	public void setObjectId(String objectId) {
+		this.objectId = objectId;
+	}
+
+	public String getRelationId() {
+		return relationId;
+	}
+
+	public void setRelationId(String relationId) {
+		this.relationId = relationId;
+	}
+
+	public String getSentence() {
+		return sentence;
+	}
+
+	public void setSentence(String sentence) {
+		this.sentence = sentence;
 	}
 }

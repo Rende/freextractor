@@ -30,10 +30,12 @@ import de.dfki.mlt.freextractor.flink.cluster_entry.ClusterId;
 public class ClusterEntryMapTest {
 	private ClusterEntryMap clusteringMap = new ClusterEntryMap();
 	private Helper helper = new Helper();
+	private String lang;
 
 	public ClusterEntryMapTest() {
 		Configuration config = new Configuration();
 		config.setString("lang", "en");
+		lang = "en";
 		clusteringMap.open(config);
 	}
 
@@ -117,7 +119,7 @@ public class ClusterEntryMapTest {
 				+ "the [[ pyrénées-atlantique ]] [[ Departments of France | department ]] "
 				+ "in south-western [[ France ]] .";
 
-		List<Word> sentenceItemList = helper.getWordList(test);
+		List<Word> sentenceItemList = helper.getWordList(test, this.lang);
 		List<Word> actual = clusteringMap.getObjectList(sentenceItemList);
 		assertThat(actual).extracting("position").containsExactly(3, 6, 7, 10);
 		assertThat(actual).extracting("surface").containsExactly("Commune_of_France", "Pyrénées-atlantique",
@@ -130,10 +132,10 @@ public class ClusterEntryMapTest {
 				+ "[[ television ]] [[ Christmas by medium | Christmas special ]]"
 				+ " that first aired December 6 , 1995 on [[ CBS ]] .";
 
-		List<Word> wordList = helper.getWordList(test);
+		List<Word> wordList = helper.getWordList(test, this.lang);
 		String expectedRelationPhrase = "is a television Christmas special that first aired December on";
-		clusteringMap.subjectPosition = 0;
-		clusteringMap.objectPosition = 13;
+		clusteringMap.subjectPos = 0;
+		clusteringMap.objectPos = 13;
 		List<String> relPhrases = clusteringMap.getRelationPhrases(wordList);
 		String actualRelationPhrase = clusteringMap.getRelationPhraseAsString(relPhrases);
 		assertThat(actualRelationPhrase).isEqualTo(expectedRelationPhrase);
@@ -142,10 +144,10 @@ public class ClusterEntryMapTest {
 	@Test
 	public void testRelationPhrase() {
 		String testNoSubject = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
-		List<Word> words = helper.getWordList(testNoSubject);
+		List<Word> words = helper.getWordList(testNoSubject, this.lang);
 		String expRelationPhrase = "is the business school of the";
-		clusteringMap.subjectPosition = 0;
-		clusteringMap.objectPosition = 6;
+		clusteringMap.subjectPos = 0;
+		clusteringMap.objectPos = 6;
 		List<String> relPhrases = clusteringMap.getRelationPhrases(words);
 		String actlRelationPhrase = clusteringMap.getRelationPhraseAsString(relPhrases);
 		assertThat(actlRelationPhrase).isEqualTo(expRelationPhrase);
@@ -193,85 +195,56 @@ public class ClusterEntryMapTest {
 
 	@Test
 	public void testClusterEntryMap() {
-		String sentence = "''' NUS Business School ''' is the [[ business school ]] of the [[ National University of Singapore ]] .";
-		System.out.println("Sentence: " + sentence);
-		String tokenizedSentence = "''' nus business school ''' be the [[ business school ]] of the [[ national university of singapore ]] .";
-		System.out.println("Tokenized Sentence: " + tokenizedSentence);
-		List<Word> words = App.helper.getWordList(sentence);
-		System.out.println("\nWord List");
-		for (Word word : words) {
-			System.out.println(word.toString());
-		}
-		System.out.println("\nObject List");
+		String sentence = "''' John Alexander Porteous ''' was a noted [[ Canadians | Canadian ]]"
+				+ " [[ columnist ]] , [[ journalist ]] and broadcaster .";
+
+		String lemSentence = "''' john alexander porteous ''' be a note [[ canadians | canadian ]]"
+				+ " [[ columnist ]] , [[ journalist ]] and broadcaster .";
+
+		List<Word> words = App.helper.getWordList(sentence, "en");
 		List<Word> objectList = clusteringMap.getObjectList(words);
 		for (Word word : objectList) {
 			System.out.println(word.toString());
 		}
-		System.out.println();
-		Entity subject = App.esService.getEntity("Q6955642");
-		clusteringMap.subject = subject;
-		System.out.println("Subject: " + subject.getLabel());
-
-		String tokSentence = clusteringMap.removeSubject(tokenizedSentence);
-
-		System.out.println("Subjectless tok-sentence: " + tokSentence + "\n");
-		System.out.println("All entities of subject");
+		String tokenizedSentence = clusteringMap.removeSubject(lemSentence);
+		// System.out.println(tokenizedSentence);
+		List<String> idList = new ArrayList<String>();
+		idList.add("Q6218616");
+		List<Entity> candidateSubjects = App.esService.getMultiEntities(idList);
+		Entity subject = candidateSubjects.get(0);
+		clusteringMap.resetGlobals();
 		HashMap<String, Entity> entityMap = clusteringMap.collectEntities(subject.getClaims());
-		for (Entry<String, Entity> entry : entityMap.entrySet()) {
-			System.out.println("Entity id: " + entry.getKey() + " entity label:" + entry.getValue().getLabel());
-		}
 
-		assertThat(entityMap).containsOnlyKeys("Q1143635", "Q334", "Q738236", "P17", "P131", "P361", "P31");
+		String[] expectedEntities = { "P106", "Q1930187", "P27", "Q16", "P735", "Q4925477", "P21", "Q6581097", "P31",
+				"Q5" };
+		Set<String> expectedEntitySet = new HashSet<String>(Arrays.asList(expectedEntities));
 
-		clusteringMap.entityMap = entityMap;
+		assertThat(entityMap.keySet()).isEqualTo(expectedEntitySet);
 
-		System.out.println("\nParents");
-		HashMap<String, Entity> entityParentMap = clusteringMap.getEntityParentMap(objectList);
-		for (Entry<String, Entity> entry : entityParentMap.entrySet()) {
-			System.out.println("Entity id: " + entry.getKey() + " parent-entity id: " + entry.getValue().getId()
-					+ " parent-entity label: " + entry.getValue().getLabel());
-		}
-		assertThat(entityParentMap).containsOnlyKeys("Q738236", "Q6955642", "Q1143635");
-		clusteringMap.entityParentMap = entityParentMap;
-
+		HashMap<String, Entity> entityParentMap = clusteringMap.getEntityParentMap(objectList, subject, entityMap);
 		Entity subjectParent = entityParentMap.get(subject.getId());
-		System.out.println(
-				"\nSubject parent label: " + subjectParent.getLabel() + " subject parent id: " + subjectParent.getId());
-		clusteringMap.subjectParent = subjectParent;
-
-		String subjectType = clusteringMap.getEntityType(subjectParent);
-		System.out.println("Subject type: " + subjectType + "\n");
-
-		String[] expectedRelationPhrases = { "is the", "is the business school of the" };
-		List<HashSet<String>> expectedBows = new ArrayList<HashSet<String>>();
-		expectedBows.add(0, new HashSet<>(Arrays.asList("be")));
-		expectedBows.add(1, new HashSet<>(Arrays.asList("be", "business", "school", "of")));
-		int index = 0;
+		assertThat(subjectParent.getId()).isEqualTo("Q5");
 		for (HashMap<String, String> claim : subject.getClaims()) {
-			// for (Entry<String, String> entry : claim.entrySet()) {
-			// System.out.println("Claim " + entry.getKey() + ": " + entry.getValue());
-			// }
 			Entity property = entityMap.get(claim.get("property-id"));
-			Entity object = entityMap.get(claim.get("object-id"));
-			ClusterId clusterId = clusteringMap.createClusterId(object, property, objectList);
-			if (clusterId != null) {
-				System.out.println("Cluster id: " + clusterId.toString());
-				// HashMap<String, Integer> histogram = clusteringMap.createHistogram(
-				// clusteringMap.removeObjectByIndex(tokSentence,
-				// clusteringMap.objectIndexInSentence));
-				// for (Entry<String, Integer> hist : histogram.entrySet()) {
-				// System.out.println("Word: " + hist.getKey() + " Count: " + hist.getValue());
-				// }
-				List<String> relationPhrases = clusteringMap.getRelationPhrases(words);
-				String relPhraseAsString = clusteringMap.getRelationPhraseAsString(relationPhrases);
-				System.out.println("Relation Phrase: " + relPhraseAsString);
-				assertThat(relPhraseAsString).isEqualTo(expectedRelationPhrases[index]);
-				Set<String> bow = clusteringMap.getBagOfWords(relationPhrases);
-				assertEquals(expectedBows.get(index), bow);
-				index++;
-				System.out.println();
+			Entity object = entityMap.get(claim.get("wikibase-item"));
+			if (property == null || object == null)
+				continue;
+			ClusterId clusterId = clusteringMap.createClusterId(object, property, objectList, entityParentMap,
+					subjectParent);
+			if (clusterId == null)
+				continue;
+			System.out.println("Cluster id: " + clusterId.toString());
+			HashMap<String, Integer> histogram = clusteringMap
+					.createHistogram(clusteringMap.removeObjectByIndex(tokenizedSentence, clusteringMap.objectIndex));
+			System.out.println("Histogram");
+			for (Entry<String, Integer> entry : histogram.entrySet()) {
+				System.out.println(entry.getKey() + " " + entry.getValue());
 			}
+			List<String> relationPhrases = clusteringMap.getRelationPhrases(words);
+			String relPhraseAsString = clusteringMap.getRelationPhraseAsString(relationPhrases);
+			System.out.println("Relation Phrase: " + relPhraseAsString);
+			Set<String> bow = clusteringMap.getBagOfWords(relationPhrases);
+			System.out.println("Bag of Words: " + bow.toString());
 		}
 	}
-
 }

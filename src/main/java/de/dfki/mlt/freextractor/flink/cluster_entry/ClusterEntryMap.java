@@ -48,7 +48,7 @@ import opennlp.tools.lemmatizer.LemmatizerModel;
  *
  */
 public class ClusterEntryMap
-		extends RichFlatMapFunction<Tuple5<Integer, String, String, String, String>, ClusterEntry> {
+		extends RichFlatMapFunction<Tuple5<Integer, List<String>, String, String, String>, ClusterEntry> {
 	/**
 	 *
 	 */
@@ -62,48 +62,47 @@ public class ClusterEntryMap
 	private MunderLine munderLine;
 
 	public String lang;
-	public Entity subject;
-	public Entity subjectParent;
-	public HashMap<String, Entity> entityMap;
-	public HashMap<String, Entity> entityParentMap;
-	// positions indicate the token position in the sentence
-	public Integer objectPosition;
-	public Integer subjectPosition;
-	// index refers the object in the object list
-	public Integer objectIndexInSentence;
+	// subj/obj position in the sentence
+	public Integer objectPos;
+	public Integer subjectPos;
+	// object index in the object list
+	public Integer objectIndex;
 
-	// pageId, subjectId, title, sentence, tokenizedSentence
+	// pageId, candidateSubjectIds, title, sentence, lemmatizedSentence
 	@Override
-	public void flatMap(Tuple5<Integer, String, String, String, String> value, Collector<ClusterEntry> out)
+	public void flatMap(Tuple5<Integer, List<String>, String, String, String> value, Collector<ClusterEntry> out)
 			throws Exception {
-		resetGlobals();
-		List<Word> words = App.helper.getWordList(value.f3);
+		List<Word> words = App.helper.getWordList(value.f3, this.lang);
 		List<Word> objectList = getObjectList(words);
-		subject = App.esService.getEntity(value.f1);
-		if (subject != null) {
-			String tokenizedSentence = removeSubject(value.f4);
-			entityMap = collectEntities(subject.getClaims());
-			entityParentMap = getEntityParentMap(objectList);
-			subjectParent = entityParentMap.get(subject.getId());
+		String tokenizedSentence = removeSubject(value.f4);
+		List<String> firstCandSubjects = value.f1.stream().limit(500).collect(Collectors.toList());
+		List<Entity> candidateSubjects = App.esService.getMultiEntities(firstCandSubjects);
+		for (Entity subject : candidateSubjects) {
+			resetGlobals();
+			HashMap<String, Entity> entityMap = collectEntities(subject.getClaims());
+			HashMap<String, Entity> entityParentMap = getEntityParentMap(objectList, subject, entityMap);
+			Entity subjectParent = entityParentMap.get(subject.getId());
 			// if subject has a parent we can proceed otherwise a cluster cannot be formed
-			if (subjectParent != null) {
-				for (HashMap<String, String> claim : subject.getClaims()) {
-					Entity property = entityMap.get(claim.get("property-id"));
-					Entity object = entityMap.get(claim.get("object-id"));
-					if (object != null && property != null) {
-						ClusterId clusterId = createClusterId(object, property, objectList);
-						if (clusterId != null) {
-							HashMap<String, Integer> histogram = createHistogram(
-									removeObjectByIndex(tokenizedSentence, objectIndexInSentence));
-							List<String> relationPhrases = getRelationPhrases(words);
-							String relPhraseAsString = getRelationPhraseAsString(relationPhrases);
-							ClusterEntry entry = new ClusterEntry(clusterId, value.f4, subject.getLabel(),
-									object.getLabel(), relPhraseAsString, value.f0, subjectPosition, objectPosition,
-									histogram, getBagOfWords(relationPhrases));
-							out.collect(entry);
-						}
-					}
-				}
+			if (subjectParent == null)
+				continue;
+			for (HashMap<String, String> claim : subject.getClaims()) {
+				Entity property = entityMap.get(claim.get("property-id"));
+				Entity object = entityMap.get(claim.get("wikibase-item"));
+				if (property == null || object == null || subject.getLabels().get(this.lang) == null
+						|| object.getLabels().get(this.lang) == null)
+					continue;
+				ClusterId clusterId = createClusterId(object, property, objectList, entityParentMap, subjectParent);
+				if (clusterId == null)
+					continue;
+				HashMap<String, Integer> histogram = createHistogram(
+						removeObjectByIndex(tokenizedSentence, objectIndex));
+				List<String> relationPhrases = getRelationPhrases(words);
+				String relPhraseAsString = getRelationPhraseAsString(relationPhrases);
+				ClusterEntry entry = new ClusterEntry(clusterId, value.f3, value.f4, subject.getLabels().get(this.lang),
+						subject.getId(), object.getLabels().get(this.lang), object.getId(), property.getId(),
+						relPhraseAsString, value.f0, this.subjectPos, this.objectPos, histogram,
+						getBagOfWords(relationPhrases));
+				out.collect(entry);
 			}
 		}
 	}
@@ -149,7 +148,7 @@ public class ClusterEntryMap
 
 	public List<String> getRelationPhrases(List<Word> words) {
 		List<String> phrases = new ArrayList<String>();
-		for (int i = subjectPosition + 1; i < objectPosition; i++) {
+		for (int i = this.subjectPos + 1; i < this.objectPos; i++) {
 			Word word = words.get(i);
 			if (word.getPosition() == i) {
 				if (word.getType() == Type.SUBJECT)
@@ -224,27 +223,27 @@ public class ClusterEntryMap
 	 * Returns entity-id -> parent-entity map Entities are mapped if they appear in
 	 * the sentence
 	 * 
-	 * @param sentenceObjectList
-	 * @return entityParentMap
 	 */
-	public HashMap<String, Entity> getEntityParentMap(List<Word> sentenceObjectList) {
+	public HashMap<String, Entity> getEntityParentMap(List<Word> sentenceObjectList, Entity subject,
+			HashMap<String, Entity> entityMap) {
 		List<String> entityIdList = new ArrayList<String>();
 		List<String> parentIdList = new ArrayList<String>();
 
 		for (HashMap<String, String> subjectClaim : subject.getClaims()) {
 			if (subjectClaim.containsValue(INSTANCE_OF_RELATION) || subjectClaim.containsValue(SUBCLASS_OF_RELATION)) {
 				entityIdList.add(subject.getId());
-				parentIdList.add(subjectClaim.get("object-id"));
+				parentIdList.add(subjectClaim.get("wikibase-item"));
 			}
-			Entity object = entityMap.get(subjectClaim.get("object-id"));
+			Entity object = entityMap.get(subjectClaim.get("wikibase-item"));
 			if (object != null && object.getClaims() != null) {
 				for (Word sentenceObject : sentenceObjectList) {
-					if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
+					if (object.getLabels().get(this.lang) != null && sentenceObject.getSurface()
+							.equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabels().get(this.lang)))) {
 						for (HashMap<String, String> objectClaim : object.getClaims()) {
 							if (objectClaim.containsValue(INSTANCE_OF_RELATION)
 									|| objectClaim.containsValue(SUBCLASS_OF_RELATION)) {
 								entityIdList.add(object.getId());
-								parentIdList.add(objectClaim.get("object-id"));
+								parentIdList.add(objectClaim.get("wikibase-item"));
 							}
 						}
 					}
@@ -268,26 +267,23 @@ public class ClusterEntryMap
 
 	/**
 	 * Creates cluster id if both subject-parent and object-parent are available
-	 * Updates current objectPosition (token position in the sentence) Updates
-	 * current objectIndexInSentence (which object in the object list)
+	 * Updates current objectPos (token position in the sentence) Updates current
+	 * objectIndex (which object in the object list)
 	 * 
-	 * @param subjectType
-	 * @param object
-	 * @param property
-	 * @param sentenceObjectList
-	 * @return ClusterId
 	 */
-	public ClusterId createClusterId(Entity object, Entity property, List<Word> sentenceObjectList) {
+	public ClusterId createClusterId(Entity object, Entity property, List<Word> sentenceObjectList,
+			HashMap<String, Entity> entityParentMap, Entity subjectParent) {
 		for (int i = 0; i < sentenceObjectList.size(); i++) {
 			Word sentenceObject = sentenceObjectList.get(i);
-			if (sentenceObject.getSurface().equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabel()))) {
+			if (object.getLabels().get(this.lang) != null && sentenceObject.getSurface()
+					.equalsIgnoreCase(Helper.fromStringToWikilabel(object.getLabels().get(this.lang)))) {
 				Entity objectParent = entityParentMap.get(object.getId());
 				String objectType = getEntityType(objectParent);
-				if (objectType != null) {
-					String relationLabel = Helper.fromLabelToKey(property.getLabel());
+				if (objectType != null && property.getLabels().get(this.lang) != null) {
+					String relationLabel = Helper.fromLabelToKey(property.getLabels().get(this.lang));
 					String subjectType = getEntityType(subjectParent);
-					objectPosition = sentenceObject.getPosition();
-					objectIndexInSentence = i;
+					this.objectPos = sentenceObject.getPosition();
+					this.objectIndex = i;
 					return new ClusterId(subjectType, objectType, relationLabel, property.getId());
 				}
 			}
@@ -299,13 +295,10 @@ public class ClusterEntryMap
 	 * Returns the formatted label of parent entity which is considered as the type
 	 * of entity
 	 * 
-	 * @param parentEntity
-	 * @return parentEntityLabel
 	 */
-
 	public String getEntityType(Entity parentEntity) {
-		if (parentEntity != null) {
-			return Helper.fromLabelToKey(parentEntity.getLabel());
+		if (parentEntity != null && parentEntity.getLabels().get(this.lang) != null) {
+			return Helper.fromLabelToKey(parentEntity.getLabels().get(this.lang));
 		}
 		return null;
 	}
@@ -313,13 +306,14 @@ public class ClusterEntryMap
 	/**
 	 * Collect all entities of the subject and returns entity-id -> entity map
 	 * 
-	 * @param claimList
-	 * @return entityMap
 	 */
 	public HashMap<String, Entity> collectEntities(List<HashMap<String, String>> claimList) {
 		List<String> idSet = new ArrayList<String>();
 		for (HashMap<String, String> claim : claimList) {
-			idSet.addAll(claim.values());
+			if (claim.containsKey("property-id") && claim.containsKey("wikibase-item")) {
+				idSet.add(claim.get("property-id"));
+				idSet.add(claim.get("wikibase-item"));
+			}
 		}
 		HashMap<String, Entity> entityMap = new HashMap<String, Entity>();
 		if (!idSet.isEmpty()) {
@@ -340,10 +334,7 @@ public class ClusterEntryMap
 	/**
 	 * Returns a word list which consists of objects of the sentence
 	 * 
-	 * @param sentenceItemList
-	 * @return
 	 */
-
 	public List<Word> getObjectList(List<Word> sentenceItemList) {
 		List<Word> objectList = new ArrayList<Word>();
 		for (Word item : sentenceItemList) {
@@ -352,7 +343,7 @@ public class ClusterEntryMap
 						Type.OBJECT);
 				objectList.add(objectWord);
 			} else if (item.getType().equals(Type.SUBJECT)) {
-				subjectPosition = item.getPosition();
+				subjectPos = item.getPosition();
 			}
 		}
 		return objectList;
@@ -361,8 +352,6 @@ public class ClusterEntryMap
 	/**
 	 * Returns bag-of-words representation of a text
 	 * 
-	 * @param text
-	 * @return bagOfWords
 	 */
 	public Set<String> getBagOfWords(List<String> relationPhrases) {
 		Set<String> bagOfWords = new HashSet<String>();
@@ -482,6 +471,7 @@ public class ClusterEntryMap
 	 */
 	@Override
 	public void open(Configuration parameters) {
+		this.subjectPos = -1;
 		if (parameters.containsKey("lang")) {
 			String lang = parameters.getString("lang", Config.getInstance().getString(Config.LANG));
 			this.lang = lang;
@@ -496,12 +486,9 @@ public class ClusterEntryMap
 		}
 	}
 
-	private void resetGlobals() {
-		subjectPosition = -1;
-		objectPosition = -1;
-		objectIndexInSentence = -1;
-		entityMap = new HashMap<>();
-		entityParentMap = new HashMap<>();
+	public void resetGlobals() {
+		this.objectPos = -1;
+		this.objectIndex = -1;
 	}
 
 	private void initializeENModuls() {
