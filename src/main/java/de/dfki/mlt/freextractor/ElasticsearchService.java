@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
@@ -124,10 +125,13 @@ public class ElasticsearchService {
 				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
 				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
 				.startObject("is-cluster-member").field("type", "boolean").endObject().startObject("relation-id")
-				.field("type", "keyword").endObject().startObject("cluster-id").field("type", "keyword")
-				.field("index", "true").endObject().startObject("subj-name").field("type", "keyword").endObject()
-				.startObject("obj-name").field("type", "keyword").endObject().startObject("relation-phrase")
-				.field("type", "keyword").endObject().startObject("tok-sent").field("type", "text").endObject()
+				.field("type", "keyword").field("index", "true").endObject().startObject("cluster-id")
+				.field("type", "keyword").field("index", "true").endObject().startObject("subj-name")
+				.field("type", "keyword").endObject().startObject("subj-id").field("type", "keyword")
+				.field("index", "true").endObject().startObject("obj-name").field("type", "keyword").endObject()
+				.startObject("obj-id").field("type", "keyword").field("index", "true").endObject()
+				.startObject("relation-phrase").field("type", "keyword").endObject().startObject("sent")
+				.field("type", "text").endObject().startObject("tok-sent").field("type", "text").endObject()
 				.startObject("page-id").field("type", "integer").endObject().startObject("subj-pos")
 				.field("type", "integer").endObject().startObject("obj-pos").field("type", "integer").endObject()
 				.startObject("words").startObject("properties").startObject("word").field("type", "keyword").endObject()
@@ -171,7 +175,9 @@ public class ElasticsearchService {
 
 			if (isResponseValid(response)) {
 				for (SearchHit hit : response.getHits()) {
-					return createEntity(hit);
+					Entity entity = createEntity(hit.getSource());
+					entity.setId(hit.getId());
+					return entity;
 				}
 			}
 
@@ -182,18 +188,18 @@ public class ElasticsearchService {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Entity createEntity(SearchHit hit) {
-		String id = hit.getId();
-		String type = hit.getSource().get("type").toString();
-		String label = hit.getSource().get("label").toString();
-		String tokLabel = hit.getSource().get("tok-label").toString();
-		String wikiTitle = "";
-		if (hit.getSource().containsKey("wiki-title"))
-			wikiTitle = hit.getSource().get("wiki-title").toString();
-		List<String> aliases = (ArrayList<String>) hit.getSource().get("aliases");
-		List<String> tokAliases = (ArrayList<String>) hit.getSource().get("tok-aliases");
-		List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) hit.getSource().get("claims");
-		Entity entity = new Entity(id, type, label, tokLabel, wikiTitle, aliases, tokAliases, claims);
+	private Entity createEntity(Map<String, Object> dataMap) {
+		String type = dataMap.get("type").toString();
+		String datatype = dataMap.get("datatype").toString();
+		HashMap<String, String> labels = (HashMap<String, String>) dataMap.get("labels");
+		HashMap<String, String> lemLabels = (HashMap<String, String>) dataMap.get("lem-labels");
+		HashMap<String, String> descriptions = (HashMap<String, String>) dataMap.get("descriptions");
+		HashMap<String, String> lemDescriptions = (HashMap<String, String>) dataMap.get("lem-descriptions");
+		HashMap<String, List<String>> aliases = (HashMap<String, List<String>>) dataMap.get("aliases");
+		HashMap<String, List<String>> lemAliases = (HashMap<String, List<String>>) dataMap.get("lem-aliases");
+		List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) dataMap.get("claims");
+		Entity entity = new Entity(type, datatype, labels, lemLabels, descriptions, lemDescriptions, aliases,
+				lemAliases, claims);
 		return entity;
 	}
 
@@ -201,40 +207,32 @@ public class ElasticsearchService {
 		return response != null && response.getHits().totalHits() > 0;
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<Entity> getMultiEntities(List<String> idList) {
-
 		List<Entity> itemList = new ArrayList<Entity>();
 		MultiGetRequestBuilder requestBuilder = getClient().prepareMultiGet();
 		for (String itemId : idList) {
 			requestBuilder.add(new MultiGetRequest.Item(Config.getInstance().getString(Config.WIKIDATA_INDEX),
 					Config.getInstance().getString(Config.WIKIDATA_ENTITY), itemId));
 		}
-		MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
-		for (MultiGetItemResponse multiGetItemResponse : multiResponse.getResponses()) {
-			GetResponse response = multiGetItemResponse.getResponse();
-			// System.out.println("getMultiEntities response: " + response);
-			if (response.isExists()) {
-				String id = response.getId();
-				String type = response.getSource().get("type").toString();
-				String label = response.getSource().get("label").toString();
-				String tokLabel = response.getSource().get("tok-label").toString();
-				String wikipediaTitle = "";
-				if (response.getSource().containsKey("wiki-title"))
-					wikipediaTitle = response.getSource().get("wiki-title").toString();
-				List<String> aliases = (ArrayList<String>) response.getSource().get("aliases");
-				List<String> tokAliases = (ArrayList<String>) response.getSource().get("tok-aliases");
-				List<HashMap<String, String>> claims = (ArrayList<HashMap<String, String>>) response.getSource()
-						.get("claims");
-				itemList.add(new Entity(id, type, label, tokLabel, wikipediaTitle, aliases, tokAliases, claims));
+		try {
+			MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
+			for (MultiGetItemResponse multiGetItemResponse : multiResponse.getResponses()) {
+				GetResponse response = multiGetItemResponse.getResponse();
+				if (response.isExists()) {
+					Entity entity = createEntity(response.getSource());
+					entity.setId(response.getId());
+					itemList.add(entity);
+				}
 			}
+		} catch (ActionRequestValidationException e) {
+			App.LOG.error("Subject not found: " + idList.get(0));
+			e.printStackTrace();
 		}
 		return itemList;
 	}
 
 	public Collection<Terms.Bucket> getClusters() {
-		SearchResponse response = getClient()
-				.prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
+		SearchResponse response = getClient().prepareSearch(Config.getInstance().getString(Config.CLUSTER_ENTRY_INDEX))
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_ENTRY)).setQuery(QueryBuilders.matchAllQuery())
 				.addAggregation(AggregationBuilders.terms("clusters").field("cluster-id").size(Integer.MAX_VALUE))
 				.setFetchSource(true).setExplain(false).execute().actionGet();
