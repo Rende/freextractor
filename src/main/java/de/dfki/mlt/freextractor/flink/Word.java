@@ -43,6 +43,6 @@ public class Word {
 	}
 
 	public String toString() {
-		return "Surface: " + this.surface + " position: " + this.position + " type: " + this.type;
+		return "Word: \"" + this.surface + "\" position: " + this.position + " type: " + this.type;
 	}
 }

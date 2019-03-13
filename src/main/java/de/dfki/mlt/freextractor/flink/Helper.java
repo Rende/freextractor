@@ -116,7 +116,7 @@ public class Helper {
 				label = label.replace("\\|", "");
 			}
 		}
-		label = Helper.fromStringToWikilabel(label);
+		label = fromStringToWikilabel(label);
 		return label;
 	}
 
