@@ -5,7 +5,6 @@ package de.dfki.mlt.freextractor;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.HttpHost;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -26,10 +26,11 @@ import org.elasticsearch.action.get.MultiGetRequestBuilder;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -51,42 +52,34 @@ public class ElasticsearchService {
 	private Client client;
 
 	public ElasticsearchService() {
-		getClient();
+		initClient();
 	}
 
-	@SuppressWarnings("resource")
-	public Client getClient() {
-		if (client == null) {
-			Settings settings = Settings.builder()
-					.put(Config.CLUSTER_NAME, Config.getInstance().getString(Config.CLUSTER_NAME)).build();
-			try {
-				client = new PreBuiltTransportClient(settings).addTransportAddress(
-						new InetSocketTransportAddress(InetAddress.getByName("134.96.187.233"), 9300));
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-		}
-		return client;
-
-	}
-
-	public static Map<String, String> getUserConfig() {
-		Map<String, String> config = new HashMap<>();
-		config.put(Config.BULK_FLUSH_MAX_ACTIONS, Config.getInstance().getString(Config.BULK_FLUSH_MAX_ACTIONS));
-		config.put(Config.CLUSTER_NAME, Config.getInstance().getString(Config.CLUSTER_NAME));
-
-		return config;
-	}
-
-	public static List<InetSocketAddress> getTransportAddresses() {
-		List<InetSocketAddress> transports = new ArrayList<>();
+	private void initClient() {
 		try {
-			transports.add(new InetSocketAddress(InetAddress.getByName(Config.getInstance().getString(Config.HOST)),
-					Config.getInstance().getInt(Config.PORT)));
+			getClient();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-		return transports;
+	}
+
+	@SuppressWarnings("resource")
+	public Client getClient() throws UnknownHostException {
+		if (client == null) {
+			Settings settings = Settings.builder()
+					.put(Config.CLUSTER_NAME, Config.getInstance().getString(Config.CLUSTER_NAME)).build();
+			client = new PreBuiltTransportClient(settings).addTransportAddress(
+					new TransportAddress(InetAddress.getByName(Config.getInstance().getString(Config.HOST)),
+							Config.getInstance().getInt(Config.PORT)));
+		}
+		return client;
+	}
+
+	public List<HttpHost> getHosts() {
+		List<HttpHost> httpHosts = new ArrayList<>();
+		httpHosts.add(new HttpHost(Config.getInstance().getString(Config.HOST),
+				Config.getInstance().getInt(Config.HTTP_PORT), "http"));
+		return httpHosts;
 	}
 
 	public boolean checkAndCreateIndex(String indexName) throws IOException, InterruptedException {
@@ -118,30 +111,80 @@ public class ElasticsearchService {
 
 	public boolean putMappingForClusterEntry() throws IOException {
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
-		XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
-				.startObject(Config.getInstance().getString(Config.CLUSTER_MEMBER)).startObject("properties")
-				.startObject("subj-type").field("type", "keyword").field("index", "true").endObject()
-				.startObject("obj-type").field("type", "keyword").field("index", "true").endObject()
-				.startObject("relation").field("type", "keyword").field("index", "true").endObject()
-				.startObject("is-cluster-member").field("type", "boolean").endObject().startObject("relation-id")
-				.field("type", "keyword").field("index", "true").endObject().startObject("cluster-id")
-				.field("type", "keyword").field("index", "true").endObject().startObject("subj-name")
-				.field("type", "keyword").endObject().startObject("subj-id").field("type", "keyword")
-				.field("index", "true").endObject().startObject("obj-name").field("type", "keyword").endObject()
-				.startObject("obj-id").field("type", "keyword").field("index", "true").endObject()
-				.startObject("relation-phrase").field("type", "keyword").endObject().startObject("sent")
-				.field("type", "text").endObject().startObject("tok-sent").field("type", "text").endObject()
-				.startObject("page-id").field("type", "integer").endObject().startObject("subj-pos")
-				.field("type", "integer").endObject().startObject("obj-pos").field("type", "integer").endObject()
-				.startObject("words").startObject("properties").startObject("word").field("type", "keyword").endObject()
-				.startObject("count").field("type", "integer").endObject().endObject().endObject().endObject() // properties
-				.endObject() // documentType
-				.endObject();
-
-		App.LOG.debug("Mapping for cluster entry: " + mappingBuilder.string());
-		PutMappingResponse putMappingResponse = indicesAdminClient
+		XContentBuilder builder = XContentFactory.jsonBuilder();
+		builder.startObject();
+		{
+			// builder.field("dynamic", "true");
+			builder.startObject("properties");
+			{
+				builder.startObject("subj-type");
+				{
+					builder.field("type", "keyword");
+				}
+				builder.endObject();
+				builder.startObject("obj-type");
+				{
+					builder.field("type", "keyword");
+				}
+				builder.endObject();
+				builder.startObject("relation");
+				{
+					builder.field("type", "keyword");
+				}
+				builder.endObject();
+				builder.startObject("cluster-id");
+				{
+					builder.field("type", "keyword");
+				}
+				builder.endObject();
+				builder.startObject("tok-sent");
+				{
+					builder.field("type", "text");
+				}
+				builder.endObject();
+				builder.startObject("page-id");
+				{
+					builder.field("type", "integer");
+				}
+				builder.endObject();
+				builder.startObject("subj-pos");
+				{
+					builder.field("type", "integer");
+				}
+				builder.endObject();
+				builder.startObject("obj-pos");
+				{
+					builder.field("type", "integer");
+				}
+				builder.endObject();
+				builder.startObject("words");
+				{
+					builder.field("type", "nested");
+					builder.startObject("properties");
+					{
+						builder.startObject("word");
+						{
+							builder.field("type", "keyword");
+						}
+						builder.endObject();
+						builder.startObject("count");
+						{
+							builder.field("type", "integer");
+						}
+						builder.endObject();
+					}
+					builder.endObject();
+				}
+				builder.endObject();
+			}
+			builder.endObject();
+		}
+		builder.endObject();
+		System.out.println(builder.toString());
+		App.LOG.debug("Mapping for type cluster member: " + builder.toString());
+		AcknowledgedResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
-				.setType(Config.getInstance().getString(Config.CLUSTER_MEMBER)).setSource(mappingBuilder).execute()
+				.setType(Config.getInstance().getString(Config.CLUSTER_MEMBER)).setSource(builder).execute()
 				.actionGet();
 
 		return putMappingResponse.isAcknowledged();
@@ -157,7 +200,7 @@ public class ElasticsearchService {
 				.endObject()// documentType
 				.endObject();
 
-		App.LOG.debug("Mapping for terms: " + mappingBuilder.string());
+		App.LOG.debug("Mapping for terms: " + mappingBuilder.toString());
 		PutMappingResponse putMappingResponse = indicesAdminClient
 				.preparePutMapping(Config.getInstance().getString(Config.TERM_INDEX))
 				.setType(Config.getInstance().getString(Config.TERM)).setSource(mappingBuilder).execute().actionGet();
@@ -174,7 +217,7 @@ public class ElasticsearchService {
 
 			if (isResponseValid(response)) {
 				for (SearchHit hit : response.getHits()) {
-					Entity entity = createEntity(hit.getSource());
+					Entity entity = createEntity(hit.getSourceAsMap());
 					entity.setId(hit.getId());
 					return entity;
 				}
@@ -203,10 +246,10 @@ public class ElasticsearchService {
 	}
 
 	private boolean isResponseValid(SearchResponse response) {
-		return response != null && response.getHits().totalHits() > 0;
+		return response != null && response.getHits().getTotalHits() > 0;
 	}
 
-	public List<Entity> getMultiEntities(List<String> idList) {
+	public List<Entity> getMultiEntities(List<String> idList) throws UnknownHostException {
 		List<Entity> itemList = new ArrayList<Entity>();
 		MultiGetRequestBuilder requestBuilder = getClient().prepareMultiGet();
 		for (String itemId : idList) {
@@ -230,18 +273,19 @@ public class ElasticsearchService {
 		return itemList;
 	}
 
-	public Collection<Terms.Bucket> getClusters() {
+	@SuppressWarnings("unchecked")
+	public Collection<Terms.Bucket> getClusters() throws UnknownHostException {
 		SearchResponse response = getClient().prepareSearch(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
 				.setTypes(Config.getInstance().getString(Config.CLUSTER_MEMBER)).setQuery(QueryBuilders.matchAllQuery())
 				.addAggregation(AggregationBuilders.terms("clusters").field("cluster-id").size(Integer.MAX_VALUE))
 				.setFetchSource(true).setExplain(false).execute().actionGet();
 
 		Terms terms = response.getAggregations().get("clusters");
-		Collection<Terms.Bucket> buckets = terms.getBuckets();
+		Collection<Terms.Bucket> buckets = (Collection<Bucket>) terms.getBuckets();
 		return buckets;
 	}
 
-	public long getClusterNumber() {
+	public long getClusterNumber() throws UnknownHostException {
 		int clusterCount = 0;
 		for (Bucket bucket : getClusters()) {
 			if (bucket.getDocCount() >= Config.getInstance().getInt(Config.MIN_CLUSTER_SIZE)) {
@@ -251,7 +295,7 @@ public class ElasticsearchService {
 		return clusterCount;
 	}
 
-	public SearchResponse getClusterEntryHits(String clusterId) {
+	public SearchResponse getClusterEntryHits(String clusterId) throws UnknownHostException {
 		SearchRequestBuilder builder = getClient()
 				.prepareSearch(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
 				.setScroll(new TimeValue(60000)).setTypes(Config.getInstance().getString(Config.CLUSTER_MEMBER))

@@ -34,12 +34,10 @@ public class TfIdfSink implements
 		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
 				.field("tf-idf", element.f1).endObject();
 
-		String json = builder.string();
-
 		UpdateRequest request = new UpdateRequest();
 		request.index(Config.getInstance().getString(Config.TERM_INDEX))
 				.type(Config.getInstance().getString(Config.TERM))
-				.id(element.f0).doc(json);
+				.id(element.f0).doc(builder);
 
 		return request;
 	}

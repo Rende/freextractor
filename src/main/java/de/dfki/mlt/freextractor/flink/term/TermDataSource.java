@@ -28,6 +28,7 @@ public class TermDataSource implements SourceFunction<Tuple2<Double, String>> {
 	private static final long serialVersionUID = 1L;
 	boolean isRunning = true;
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void run(SourceContext<Tuple2<Double, String>> ctx) throws Exception {
 		while (isRunning) {
@@ -45,7 +46,7 @@ public class TermDataSource implements SourceFunction<Tuple2<Double, String>> {
 
 			Long total = App.esService.getClusterNumber();
 			Terms terms = response.getAggregations().get("ts");
-			Collection<Terms.Bucket> buckets = terms.getBuckets();
+			Collection<Terms.Bucket> buckets = (Collection<Bucket>) terms.getBuckets();
 			for (Bucket bucket : buckets) {
 				Long df = bucket.getDocCount();
 				Double idf = Math.log10(total / df);

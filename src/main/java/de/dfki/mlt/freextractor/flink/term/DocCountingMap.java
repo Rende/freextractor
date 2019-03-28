@@ -46,7 +46,7 @@ public class DocCountingMap implements
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
 				String id = hit.getId();
-				Double tf = (Double) hit.getSource().get("tf");
+				Double tf = (Double) hit.getSourceAsMap().get("tf");
 				Double tfIdf = tf * idf;
 				out.collect(new Tuple2<String, Double>(id, tfIdf));
 			}

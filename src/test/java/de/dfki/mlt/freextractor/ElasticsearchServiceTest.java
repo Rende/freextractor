@@ -4,6 +4,7 @@
 package de.dfki.mlt.freextractor;
 
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,7 +21,7 @@ public class ElasticsearchServiceTest {
 	public ElasticsearchService esService = new ElasticsearchService();
 
 	@Test
-	public void testGetMultiEntities() {
+	public void testGetMultiEntities() throws UnknownHostException {
 		List<String> idList = new ArrayList<String>();
 		idList.add("Q83030");
 		List<Entity> results = esService.getMultiEntities(idList);

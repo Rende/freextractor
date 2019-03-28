@@ -36,10 +36,9 @@ public class TermSink implements
 				.field("tf-idf", element.f2).field("cluster-id", element.f3)
 				.endObject();
 
-		String json = builder.string();
 		IndexRequest indexRequest = Requests.indexRequest()
 				.index(Config.getInstance().getString(Config.TERM_INDEX))
-				.type(Config.getInstance().getString(Config.TERM)).source(json);
+				.type(Config.getInstance().getString(Config.TERM)).source(builder);
 
 		return indexRequest;
 	}

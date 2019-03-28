@@ -3,10 +3,13 @@ package de.dfki.mlt.freextractor;
 import java.util.List;
 
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.elasticsearch5.ElasticsearchSink;
+import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,10 +55,14 @@ public class App {
 		env.setParallelism(10);
 		esService.checkAndCreateIndex(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX));
 		esService.putMappingForClusterEntry();
-		DataStream<Tuple5<Integer, List<String>, String, String, String>> stream = env.addSource(new SentenceDataSource());
-		stream.flatMap(new TypeClusterMap())
-				.addSink(new ElasticsearchSink<TypeClusterMember>(ElasticsearchService.getUserConfig(),
-						ElasticsearchService.getTransportAddresses(), new TypeClusterSink()));
+		DataStream<Tuple5<Integer, List<String>, String, String, String>> stream = env
+				.addSource(new SentenceDataSource());
+		SingleOutputStreamOperator<TypeClusterMember> typeClusterStream = stream.flatMap(new TypeClusterMap());
+		ElasticsearchSink.Builder<TypeClusterMember> esSinkBuilder = new ElasticsearchSink.Builder<>(
+				esService.getHosts(), new TypeClusterSink());
+		esSinkBuilder.setBulkFlushMaxActions(Config.getInstance().getInt(Config.BULK_FLUSH_MAX_ACTIONS));
+		typeClusterStream.addSink(esSinkBuilder.build());
+
 		JobExecutionResult result = env.execute("SentenceProcessingApp");
 		return result.isJobExecutionResult();
 	}
@@ -72,8 +79,12 @@ public class App {
 		DataStream<String> stream = env.addSource(new ClusterIdDataSource());
 		esService.checkAndCreateIndex(Config.getInstance().getString(Config.TERM_INDEX));
 		esService.putMappingForTerms();
-		stream.flatMap(new TermCountingMap()).addSink(new ElasticsearchSink<>(ElasticsearchService.getUserConfig(),
-				ElasticsearchService.getTransportAddresses(), new TermSink()));
+		SingleOutputStreamOperator<Tuple4<String, Double, Double, String>> termStream = stream
+				.flatMap(new TermCountingMap());
+		ElasticsearchSink.Builder<Tuple4<String, Double, Double, String>> esSinkBuilder = new ElasticsearchSink.Builder<>(
+				esService.getHosts(), new TermSink());
+		esSinkBuilder.setBulkFlushMaxActions(Config.getInstance().getInt(Config.BULK_FLUSH_MAX_ACTIONS));
+		termStream.addSink(esSinkBuilder.build());
 		JobExecutionResult result = env.execute("termCountingApp");
 		return result.isJobExecutionResult();
 	}
@@ -86,8 +97,12 @@ public class App {
 	public static boolean docCountingApp() throws Exception {
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(14);
-		env.addSource(new TermDataSource()).flatMap(new DocCountingMap()).addSink(new ElasticsearchSink<>(
-				ElasticsearchService.getUserConfig(), ElasticsearchService.getTransportAddresses(), new TfIdfSink()));
+		SingleOutputStreamOperator<Tuple2<String, Double>> docStream = env.addSource(new TermDataSource())
+				.flatMap(new DocCountingMap());
+		ElasticsearchSink.Builder<Tuple2<String, Double>> esSinkBuilder = new ElasticsearchSink.Builder<>(
+				esService.getHosts(), new TfIdfSink());
+		esSinkBuilder.setBulkFlushMaxActions(Config.getInstance().getInt(Config.BULK_FLUSH_MAX_ACTIONS));
+		docStream.addSink(esSinkBuilder.build());
 		JobExecutionResult result = env.execute("docCountingApp");
 		return result.isJobExecutionResult();
 	}
