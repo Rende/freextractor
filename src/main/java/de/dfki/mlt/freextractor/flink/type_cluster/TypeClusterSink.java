@@ -27,35 +27,34 @@ public class TypeClusterSink implements ElasticsearchSinkFunction<TypeClusterMem
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public IndexRequest createIndexRequest(TypeClusterMember clusterEntry) throws IOException {
+	public IndexRequest createIndexRequest(TypeClusterMember typeClusterMember) throws IOException {
 
 		XContentBuilder builder = XContentFactory.jsonBuilder().startObject()
-				.field("subj-type", clusterEntry.getClusterId().getSubjectType())
-				.field("obj-type", clusterEntry.getClusterId().getObjectType())
-				.field("relation", clusterEntry.getClusterId().getRelationLabel())
-				.field("is-cluster-member", clusterEntry.getIsClusterMember())
-				.field("relation-id", clusterEntry.getClusterId().getRelationId())
-				.field("cluster-id", clusterEntry.getClusterId().toString())
-				.field("subj-name", clusterEntry.getSubjectName())
-				.field("subj-id", clusterEntry.getSubjectId())
-				.field("obj-name", clusterEntry.getObjectName())
-				.field("obj-id", clusterEntry.getObjectId())
-				.field("relation-phrase", clusterEntry.getRelationPhrase())
-				.field("sent", clusterEntry.getSentence())
-				.field("lem-sent", clusterEntry.getTokenizedSentence())
-				.field("page-id", clusterEntry.getPageId())
-				.field("subj-pos", clusterEntry.getSubjectPosition())
-				.field("obj-pos", clusterEntry.getObjectPosition())
-				.field("relation-phrase-bow", clusterEntry.getBagOfWords()).startArray("words");
+				.field("subj-type", typeClusterMember.getClusterId().getSubjectType())
+				.field("obj-type", typeClusterMember.getClusterId().getObjectType())
+				.field("relation", typeClusterMember.getClusterId().getRelationLabel())
+				.field("is-cluster-member", typeClusterMember.getIsClusterMember())
+				.field("relation-id", typeClusterMember.getClusterId().getRelationId())
+				.field("cluster-id", typeClusterMember.getClusterId().toString())
+				.field("subj-name", typeClusterMember.getSubjectName())
+				.field("subj-id", typeClusterMember.getSubjectId())
+				.field("obj-name", typeClusterMember.getObjectName())
+				.field("obj-id", typeClusterMember.getObjectId())
+				.field("relation-phrase", typeClusterMember.getRelationPhrase())
+				.field("sent", typeClusterMember.getSentence())
+				.field("lem-sent", typeClusterMember.getTokenizedSentence())
+				.field("page-id", typeClusterMember.getPageId())
+				.field("subj-pos", typeClusterMember.getSubjectPosition())
+				.field("obj-pos", typeClusterMember.getObjectPosition())
+				.field("relation-phrase-bow", typeClusterMember.getBagOfWords()).startArray("words");
 
-		for (Map.Entry<String, Integer> entry : clusterEntry.getHistogram().entrySet()) {
+		for (Map.Entry<String, Integer> entry : typeClusterMember.getHistogram().entrySet()) {
 			builder.startObject().field("word", entry.getKey()).field("count", entry.getValue()).endObject();
 		}
 		builder.endArray().endObject();
-		String json = builder.string();
 		IndexRequest indexRequest = Requests.indexRequest()
 				.index(Config.getInstance().getString(Config.TYPE_CLUSTER_INDEX))
-				.type(Config.getInstance().getString(Config.CLUSTER_MEMBER)).source(json);
+				.type(Config.getInstance().getString(Config.CLUSTER_MEMBER)).source(builder);
 
 		return indexRequest;
 	}

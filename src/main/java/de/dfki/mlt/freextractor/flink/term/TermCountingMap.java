@@ -34,7 +34,7 @@ public class TermCountingMap implements FlatMapFunction<String, Tuple4<String, D
 		SearchResponse response = App.esService.getClusterEntryHits(clusterId);
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit.getSource().get("words");
+				List<Map<Object, Object>> wordMap = (List<Map<Object, Object>>) hit.getSourceAsMap().get("words");
 				for (Map<Object, Object> entry : wordMap) {
 					String word = (String) entry.get("word");
 					Integer count = (Integer) entry.get("count");

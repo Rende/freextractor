@@ -16,6 +16,7 @@ public final class Config {
 	public static final String BULK_FLUSH_MAX_ACTIONS = "bulk.flush.max.actions";
 	public static final String HOST = "host";
 	public static final String PORT = "port";
+	public static final String HTTP_PORT = "http.port";
 	public static final String WIKIDATA_INDEX = "wikidata.index";
 	public static final String WIKIDATA_ENTITY = "wikidata.entity.type";
 	public static final String WIKIPEDIA_SENTENCE_INDEX = "wikipedia.sentence.index";

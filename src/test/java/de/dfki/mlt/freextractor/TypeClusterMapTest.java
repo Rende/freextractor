@@ -6,6 +6,7 @@ package de.dfki.mlt.freextractor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -191,7 +192,7 @@ public class TypeClusterMapTest {
 	}
 
 	@Test
-	public void testClusterEntryMap() {
+	public void testClusterEntryMap() throws UnknownHostException {
 		String sentence = "''' John Alexander Porteous ''' was a noted [[ Canadians | Canadian ]]"
 				+ " [[ columnist ]] , [[ journalist ]] and broadcaster .";
 

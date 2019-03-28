@@ -5,6 +5,7 @@ package de.dfki.mlt.freextractor.flink.type_cluster;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -252,7 +253,11 @@ public class TypeClusterMap
 		}
 		List<Entity> parentList = new ArrayList<Entity>();
 		if (!parentIdList.isEmpty()) {
-			parentList = App.esService.getMultiEntities(parentIdList);
+			try {
+				parentList = App.esService.getMultiEntities(parentIdList);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
 		}
 		HashMap<String, Entity> objectParentMap = new HashMap<String, Entity>();
 		for (int i = 0; i < parentIdList.size(); i++) {
@@ -318,7 +323,11 @@ public class TypeClusterMap
 		HashMap<String, Entity> entityMap = new HashMap<String, Entity>();
 		if (!idSet.isEmpty()) {
 			// entityMap contains properties + objects
-			entityMap = entityListToMap(App.esService.getMultiEntities(idSet));
+			try {
+				entityMap = entityListToMap(App.esService.getMultiEntities(idSet));
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
 		}
 		return entityMap;
 	}

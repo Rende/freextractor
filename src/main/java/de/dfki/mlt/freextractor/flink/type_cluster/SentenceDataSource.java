@@ -37,11 +37,11 @@ public class SentenceDataSource implements SourceFunction<Tuple5<Integer, List<S
 		SearchResponse response = request.execute().actionGet();
 		do {
 			for (SearchHit hit : response.getHits().getHits()) {
-				Integer pageId = Integer.parseInt(hit.getSource().get("page-id").toString());
-				List<String> candidateSubjs = (List<String>) hit.getSource().get("subject-id");
-				String title = hit.getSource().get("title").toString();
-				String sentence = hit.getSource().get("sentence").toString();
-				String lemSentence = hit.getSource().get("lem-sentence").toString();
+				Integer pageId = Integer.parseInt(hit.getSourceAsMap().get("page-id").toString());
+				List<String> candidateSubjs = (List<String>) hit.getSourceAsMap().get("subject-id");
+				String title = hit.getSourceAsMap().get("title").toString();
+				String sentence = hit.getSourceAsMap().get("sentence").toString();
+				String lemSentence = hit.getSourceAsMap().get("lem-sentence").toString();
 				if (!candidateSubjs.isEmpty())
 					ctx.collect(new Tuple5<Integer, List<String>, String, String, String>(pageId, candidateSubjs, title,
 							sentence, lemSentence));
