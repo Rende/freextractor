@@ -40,6 +40,7 @@ public class App {
 		sentenceProcessingApp();
 		// termCountingApp();
 		// docCountingApp();
+		esService.stopConnection();
 
 	}
 

@@ -42,7 +42,7 @@ public class SentenceDataSource implements SourceFunction<Tuple5<Integer, List<S
 				String title = hit.getSourceAsMap().get("title").toString();
 				String sentence = hit.getSourceAsMap().get("sentence").toString();
 				String lemSentence = hit.getSourceAsMap().get("lem-sentence").toString();
-				if (!candidateSubjs.isEmpty())
+				if (!(candidateSubjs.isEmpty() || candidateSubjs.get(0) == ""))
 					ctx.collect(new Tuple5<Integer, List<String>, String, String, String>(pageId, candidateSubjs, title,
 							sentence, lemSentence));
 			}

@@ -99,10 +99,10 @@ public class TypeClusterMap
 						removeObjectByIndex(tokenizedSentence, objectIndex));
 				List<String> relationPhrases = getRelationPhrases(words);
 				String relPhraseAsString = getRelationPhraseAsString(relationPhrases);
-				TypeClusterMember entry = new TypeClusterMember(clusterId, value.f3, value.f4, subject.getLabels().get(this.lang),
-						subject.getId(), object.getLabels().get(this.lang), object.getId(), property.getId(),
-						relPhraseAsString, value.f0, this.subjectPos, this.objectPos, histogram,
-						getBagOfWords(relationPhrases));
+				TypeClusterMember entry = new TypeClusterMember(clusterId, value.f3, value.f4,
+						subject.getLabels().get(this.lang), subject.getId(), object.getLabels().get(this.lang),
+						object.getId(), property.getId(), relPhraseAsString, value.f0, this.subjectPos, this.objectPos,
+						histogram, getBagOfWords(relationPhrases));
 				out.collect(entry);
 			}
 		}

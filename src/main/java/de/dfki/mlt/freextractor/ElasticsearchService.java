@@ -82,6 +82,10 @@ public class ElasticsearchService {
 		return httpHosts;
 	}
 
+	public void stopConnection() throws UnknownHostException {
+		getClient().close();
+	}
+
 	public boolean checkAndCreateIndex(String indexName) throws IOException, InterruptedException {
 		boolean result = false;
 		IndicesAdminClient indicesAdminClient = getClient().admin().indices();
@@ -260,7 +264,7 @@ public class ElasticsearchService {
 			MultiGetResponse multiResponse = requestBuilder.execute().actionGet();
 			for (MultiGetItemResponse multiGetItemResponse : multiResponse.getResponses()) {
 				GetResponse response = multiGetItemResponse.getResponse();
-				if (response.isExists()) {
+				if (response != null && response.isExists()) {
 					Entity entity = createEntity(response.getSource());
 					entity.setId(response.getId());
 					itemList.add(entity);
