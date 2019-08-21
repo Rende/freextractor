@@ -375,20 +375,24 @@ public class TypeClusterMap
 	}
 
 	public String lemmatizeDE(List<String> tokensAsString) {
-		String[][] coNllTable = this.munderLine.processTokenizedSentence(tokensAsString);
-
-		String[] tokens = new String[coNllTable.length];
-		String[] posTags = new String[coNllTable.length];
-		for (int i = 0; i < coNllTable.length; i++) {
-			tokens[i] = coNllTable[i][1];
-			posTags[i] = coNllTable[i][3];
-		}
-		String[] lemmata = this.lemmatizer.lemmatize(tokens, posTags);
 		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < lemmata.length; i++) {
-			if (checkAliasConditionDE(posTags[i])) {
-				builder.append(lemmata[i] + " ");
+		try {
+			String[][] coNllTable = this.munderLine.processTokenizedSentence(tokensAsString);
+			String[] tokens = new String[coNllTable.length];
+			String[] posTags = new String[coNllTable.length];
+			for (int i = 0; i < coNllTable.length; i++) {
+				tokens[i] = coNllTable[i][1];
+				posTags[i] = coNllTable[i][3];
 			}
+			String[] lemmata = this.lemmatizer.lemmatize(tokens, posTags);
+
+			for (int i = 0; i < lemmata.length; i++) {
+				if (checkAliasConditionDE(posTags[i])) {
+					builder.append(lemmata[i] + " ");
+				}
+			}
+		} catch (Exception e) {
+			App.LOG.error(e.getLocalizedMessage());
 		}
 		return builder.toString().trim();
 	}
