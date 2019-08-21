@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 
 import java.net.UnknownHostException;
@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.junit.Test;
+
+import de.dfki.mlt.diretc.ElasticsearchService;
+import de.dfki.mlt.diretc.Entity;
 
 /**
  * @author Aydan Rende, DFKI

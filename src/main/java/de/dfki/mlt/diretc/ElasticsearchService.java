@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,7 +42,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

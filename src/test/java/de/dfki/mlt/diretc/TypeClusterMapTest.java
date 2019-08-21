@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -18,8 +18,12 @@ import java.util.Set;
 import org.apache.flink.configuration.Configuration;
 import org.junit.Test;
 
-import de.dfki.mlt.freextractor.flink.type_cluster.ClusterId;
-import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMap;
+import de.dfki.mlt.diretc.App;
+import de.dfki.mlt.diretc.Entity;
+import de.dfki.mlt.diretc.Helper;
+import de.dfki.mlt.diretc.Word;
+import de.dfki.mlt.diretc.flink.type_cluster.ClusterId;
+import de.dfki.mlt.diretc.flink.type_cluster.TypeClusterMap;
 
 /**
  * @author Aydan Rende, DFKI

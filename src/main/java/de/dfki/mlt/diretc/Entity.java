@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import java.util.HashMap;
 import java.util.List;

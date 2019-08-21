@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.term;
+package de.dfki.mlt.diretc.flink.term;
 
 import java.io.IOException;
 
@@ -14,8 +14,8 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
-import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.App;
+import de.dfki.mlt.diretc.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

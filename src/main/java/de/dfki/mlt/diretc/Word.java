@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 /**
  * @author Aydan Rende, DFKI

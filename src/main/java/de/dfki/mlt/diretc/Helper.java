@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import java.io.IOException;
 import java.util.ArrayList;

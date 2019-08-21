@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.type_cluster;
+package de.dfki.mlt.diretc.flink.type_cluster;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,12 +26,12 @@ import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
-import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.Entity;
-import de.dfki.mlt.freextractor.Helper;
-import de.dfki.mlt.freextractor.Word;
-import de.dfki.mlt.freextractor.WordType;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.App;
+import de.dfki.mlt.diretc.Entity;
+import de.dfki.mlt.diretc.Helper;
+import de.dfki.mlt.diretc.Word;
+import de.dfki.mlt.diretc.WordType;
+import de.dfki.mlt.diretc.preferences.Config;
 import de.dfki.mlt.munderline.MunderLine;
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.PartOfSpeechAnnotation;

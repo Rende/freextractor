@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.preferences;
+package de.dfki.mlt.diretc.preferences;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;

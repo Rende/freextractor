@@ -1,4 +1,4 @@
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 public enum WordType {
 	SUBJECT, OBJECT, OTHER

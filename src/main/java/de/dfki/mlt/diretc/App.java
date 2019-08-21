@@ -1,4 +1,4 @@
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import java.util.List;
 
@@ -13,17 +13,17 @@ import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dfki.mlt.freextractor.flink.term.ClusterIdDataSource;
-import de.dfki.mlt.freextractor.flink.term.DocCountingMap;
-import de.dfki.mlt.freextractor.flink.term.TermCountingMap;
-import de.dfki.mlt.freextractor.flink.term.TermDataSource;
-import de.dfki.mlt.freextractor.flink.term.TermSink;
-import de.dfki.mlt.freextractor.flink.term.TfIdfSink;
-import de.dfki.mlt.freextractor.flink.type_cluster.SentenceDataSource;
-import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMap;
-import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterMember;
-import de.dfki.mlt.freextractor.flink.type_cluster.TypeClusterSink;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.flink.term.ClusterIdDataSource;
+import de.dfki.mlt.diretc.flink.term.DocCountingMap;
+import de.dfki.mlt.diretc.flink.term.TermCountingMap;
+import de.dfki.mlt.diretc.flink.term.TermDataSource;
+import de.dfki.mlt.diretc.flink.term.TermSink;
+import de.dfki.mlt.diretc.flink.term.TfIdfSink;
+import de.dfki.mlt.diretc.flink.type_cluster.SentenceDataSource;
+import de.dfki.mlt.diretc.flink.type_cluster.TypeClusterMap;
+import de.dfki.mlt.diretc.flink.type_cluster.TypeClusterMember;
+import de.dfki.mlt.diretc.flink.type_cluster.TypeClusterSink;
+import de.dfki.mlt.diretc.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

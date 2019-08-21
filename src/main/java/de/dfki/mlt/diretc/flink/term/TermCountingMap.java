@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.term;
+package de.dfki.mlt.diretc.flink.term;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.search.SearchHit;
 
-import de.dfki.mlt.freextractor.App;
+import de.dfki.mlt.diretc.App;
 
 /**
  * @author Aydan Rende, DFKI

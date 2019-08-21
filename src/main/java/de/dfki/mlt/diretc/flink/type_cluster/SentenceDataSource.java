@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.type_cluster;
+package de.dfki.mlt.diretc.flink.type_cluster;
 
 import java.util.List;
 
@@ -13,8 +13,8 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 
-import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.App;
+import de.dfki.mlt.diretc.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

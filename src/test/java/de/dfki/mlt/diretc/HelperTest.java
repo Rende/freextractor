@@ -1,10 +1,14 @@
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
 import org.junit.Test;
+
+import de.dfki.mlt.diretc.Helper;
+import de.dfki.mlt.diretc.Word;
+import de.dfki.mlt.diretc.WordType;
 
 public class HelperTest {
 	private Helper helper = new Helper();

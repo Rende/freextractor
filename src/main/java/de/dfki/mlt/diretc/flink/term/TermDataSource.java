@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.term;
+package de.dfki.mlt.diretc.flink.term;
 
 import java.util.Collection;
 
@@ -13,8 +13,8 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 
-import de.dfki.mlt.freextractor.App;
-import de.dfki.mlt.freextractor.preferences.Config;
+import de.dfki.mlt.diretc.App;
+import de.dfki.mlt.diretc.preferences.Config;
 
 /**
  * @author Aydan Rende, DFKI

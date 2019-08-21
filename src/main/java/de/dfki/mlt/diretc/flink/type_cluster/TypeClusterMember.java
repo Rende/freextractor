@@ -1,7 +1,7 @@
 /**
  *
  */
-package de.dfki.mlt.freextractor.flink.type_cluster;
+package de.dfki.mlt.diretc.flink.type_cluster;
 
 import java.io.Serializable;
 import java.util.HashMap;

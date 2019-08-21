@@ -1,4 +1,4 @@
-package de.dfki.mlt.freextractor;
+package de.dfki.mlt.diretc;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
